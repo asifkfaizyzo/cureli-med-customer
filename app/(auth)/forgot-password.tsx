@@ -29,18 +29,27 @@ export default function ForgotPasswordScreen() {
 
   const isSetPasswordMode = params.mode === 'set-password';
 
-  // Always initialize phone cleanly
   const [phone, setPhone]     = useState(params.phone ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
+  const cleanInput = (text: string) => {
+    let cleaned = text.replace(/\D/g, '');
+    if (cleaned.startsWith('91') && cleaned.length > 10) {
+      cleaned = cleaned.substring(2);
+    } else if (cleaned.startsWith('0') && cleaned.length > 10) {
+      cleaned = cleaned.substring(1);
+    }
+    return cleaned.slice(0, 10);
+  };
+
   function validate(): string | null {
-    const cleaned = phone.replace(/\D/g, '');
+    const cleaned = phone.replace(/\D/g, '').trim();
     if (cleaned.length === 0) return 'Enter your mobile number';
     if (cleaned.length < 10) return 'Enter a valid 10-digit mobile number';
     
     // Bypass constraint past local regex for reviewer number
-    const isReview = cleaned === "1234567890";
+    const isReview = cleaned.endsWith("1234567890");
     if (!isReview && !/^[6-9]/.test(cleaned)) return 'Enter a valid Indian mobile number';
     return null;
   }
@@ -57,7 +66,7 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
-      const cleaned = phone.replace(/\D/g, '');
+      const cleaned = phone.replace(/\D/g, '').trim();
       const normalized = `+91${cleaned}`;
       await sendResetOtp(normalized);
 
@@ -163,7 +172,7 @@ export default function ForgotPasswordScreen() {
                 style={[styles.input, { color: colors.text.primary }]}
                 value={phone}
                 onChangeText={(text) => {
-                  setPhone(text.replace(/\D/g, '').slice(0, 10));
+                  setPhone(cleanInput(text));
                   if (error) setError(null);
                 }}
                 placeholder="98765 43210"

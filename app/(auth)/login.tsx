@@ -28,7 +28,6 @@ export default function LoginScreen() {
   const { colors, isDark } = useTheme();
 
   const [step, setStep]                 = useState<LoginStep>('phone');
-  // Starts clean and empty — no auto-filling
   const [phone, setPhone]               = useState('');
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -37,18 +36,29 @@ export default function LoginScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
 
+  // Helper to handle autofilled or pasted +91 / 91 / 0 prefixes safely
+  const cleanInput = (text: string) => {
+    let cleaned = text.replace(/\D/g, '');
+    if (cleaned.startsWith('91') && cleaned.length > 10) {
+      cleaned = cleaned.substring(2);
+    } else if (cleaned.startsWith('0') && cleaned.length > 10) {
+      cleaned = cleaned.substring(1);
+    }
+    return cleaned.slice(0, 10);
+  };
+
   async function handleContinue() {
     Keyboard.dismiss();
     setError(null);
 
-    const cleaned = phone.replace(/\D/g, '');
+    const cleaned = phone.replace(/\D/g, '').trim();
     if (cleaned.length < 10) {
       setError('Enter a valid 10-digit mobile number');
       return;
     }
 
-    // Allow reviewer bypass past regex constraints to the server validation
-    const isReview = cleaned === "1234567890";
+    // Allow reviewer bypass dynamically matching exact review format
+    const isReview = cleaned.endsWith("1234567890");
     if (!isReview && !/^[6-9]/.test(cleaned)) {
       setError('Enter a valid Indian mobile number');
       return;
@@ -100,7 +110,8 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const identifier = `+91${phone.replace(/\D/g, '')}`;
+      const cleaned = phone.replace(/\D/g, '').trim();
+      const identifier = `+91${cleaned}`;
       await loginWithPassword(identifier, password);
 
       const user = useAuthStore.getState().user;
@@ -115,7 +126,7 @@ export default function LoginScreen() {
       if (code === 'PASSWORD_NOT_SET') {
         router.push({
           pathname: '/(auth)/forgot-password',
-          params: { phone: phone.replace(/\D/g, ''), mode: 'set-password' },
+          params: { phone: phone.replace(/\D/g, '').trim(), mode: 'set-password' },
         });
         return;
       }
@@ -139,7 +150,7 @@ export default function LoginScreen() {
     }, 350);
   }
 
-  const cleanedPhone = phone.replace(/\D/g, '');
+  const cleanedPhone = phone.replace(/\D/g, '').trim();
   const canContinue = cleanedPhone.length === 10;
   const canLogin = password.length >= 6;
 
@@ -234,7 +245,7 @@ export default function LoginScreen() {
               style={[styles.input, { color: colors.text.primary }]}
               value={phone}
               onChangeText={(text) => {
-                setPhone(text.replace(/\D/g, '').slice(0, 10));
+                setPhone(cleanInput(text));
                 if (error) setError(null);
               }}
               placeholder="98765 43210"

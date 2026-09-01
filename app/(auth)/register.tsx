@@ -25,7 +25,6 @@ export default function RegisterScreen() {
   const { sendRegisterOtp } = useAuthStore();
   const { colors, isDark } = useTheme();
 
-  // Keep state completely empty to satisfy validation flows
   const [phone, setPhone] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
@@ -34,12 +33,22 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const cleanInput = (text: string) => {
+    let cleaned = text.replace(/\D/g, '');
+    if (cleaned.startsWith('91') && cleaned.length > 10) {
+      cleaned = cleaned.substring(2);
+    } else if (cleaned.startsWith('0') && cleaned.length > 10) {
+      cleaned = cleaned.substring(1);
+    }
+    return cleaned.slice(0, 10);
+  };
+
   function validate(): string | null {
-    const cleaned = phone.replace(/\D/g, "");
+    const cleaned = phone.replace(/\D/g, "").trim();
     if (cleaned.length < 10) return "Enter a valid 10-digit mobile number";
     
-    // Bypass constraints strictly for the reviewer number past client validations
-    const isReview = cleaned === "1234567890";
+    // Bypass constraints strictly for the reviewer number
+    const isReview = cleaned.endsWith("1234567890");
     if (!isReview && !/^[6-9]/.test(cleaned)) return "Enter a valid Indian mobile number";
     if (password.length < 8) return "Password must be at least 8 characters";
     if (password !== confirmPassword) return "Passwords do not match";
@@ -58,7 +67,7 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const cleanedPhone = phone.replace(/\D/g, "");
+      const cleanedPhone = phone.replace(/\D/g, "").trim();
       const normalizedPhone = `+91${cleanedPhone}`;
       
       await sendRegisterOtp(normalizedPhone);
@@ -80,7 +89,7 @@ export default function RegisterScreen() {
   }
 
   const canSubmit =
-    phone.replace(/\D/g, "").length === 10 &&
+    phone.replace(/\D/g, "").trim().length === 10 &&
     password.length >= 8 &&
     confirmPassword.length >= 8;
 
@@ -165,7 +174,7 @@ export default function RegisterScreen() {
                 style={[styles.input, { color: colors.text.primary }]}
                 value={phone}
                 onChangeText={(text) => {
-                  setPhone(text.replace(/\D/g, "").slice(0, 10));
+                  setPhone(cleanInput(text));
                   if (error) setError(null);
                 }}
                 placeholder="98765 43210"
