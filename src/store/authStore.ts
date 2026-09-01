@@ -1,5 +1,3 @@
-// src/store/authStore.ts
-
 import { create } from 'zustand';
 import { StorageService } from '../services/storage';
 import { authApi } from '../services/api';
@@ -29,6 +27,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
+    // Immediately restore stored session so the user sees their dashboard right away
     if (storedUser) {
       set({ user: storedUser, accessToken });
     }
@@ -46,9 +45,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       getCartStore().initCart(freshUser.id);
-    } catch {
-      StorageService.clearAuth();
-      set({ status: 'unauthenticated', user: null, accessToken: null });
+    } catch (err: any) {
+      // Check if it's an explicit authentication rejection from the server
+      const status = err?.response?.status;
+      const isExplicitAuthFailure = status === 401 || status === 403;
+
+      if (isExplicitAuthFailure) {
+        // Only wipe data if the server actively rejected the credentials
+        StorageService.clearAuth();
+        set({ status: 'unauthenticated', user: null, accessToken: null });
+      } else {
+        // Server is down, or user is offline!
+        // DO NOT log them out. Keep them authenticated with their cached credentials.
+        set({
+          status: 'authenticated',
+          user: storedUser || null,
+          accessToken,
+        });
+        if (storedUser) {
+          getCartStore().initCart(storedUser.id);
+        }
+      }
     }
   },
 

@@ -119,11 +119,20 @@ api.interceptors.response.use(
         processRefreshQueue(null, newAccessToken);
 
         return api(originalRequest);
-      } catch (refreshError) {
-        StorageService.clearAuth();
-        processRefreshQueue(refreshError, null);
-        authEventEmitter.emit("logout");
+      } catch (refreshError: any) {
+        // ONLY log out if the server explicitly rejected the refresh token
+        // HTTP 400 = bad refresh token, 401 = invalid, 403 = revoked/suspended
+        const status = refreshError?.response?.status;
+        const isAuthRejection = status === 400 || status === 401 || status === 403;
 
+        if (isAuthRejection) {
+          StorageService.clearAuth();
+          authEventEmitter.emit("logout");
+        }
+        // If it's a network error (no status), we do NOT wipe credentials.
+        // The user is just offline — they'll retry when they're back online.
+
+        processRefreshQueue(refreshError, null);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

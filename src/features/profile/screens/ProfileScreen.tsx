@@ -1,39 +1,46 @@
 //cureli-mobile\src\features\profile\screens\ProfileScreen.tsx
+import { MaterialIcons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
-  View,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { MaterialIcons } from "@expo/vector-icons";
-
-import { ProfileHeader } from "../components/ProfileHeader";
-import { ProfileSection } from "../components/ProfileSection";
-import { ProfileMenuItem } from "../components/ProfileMenuItem";
 import { AddressCard } from "../components/AddressCard";
 import { EmptyAddressState } from "../components/EmptyAddressState";
 import { LogoutButton } from "../components/LogoutButton";
+import { ProfileHeader } from "../components/ProfileHeader";
+import { ProfileMenuItem } from "../components/ProfileMenuItem";
+import { ProfileSection } from "../components/ProfileSection";
 
-import { useProfile } from "../hooks/useProfile";
-import { useAddresses } from "../hooks/useAddresses";
-import { useAddressMutations } from "../hooks/useAddressMutations";
-import { profileApi, extractErrorMessage } from "../api/profile.api";
-import { useAuthStore } from "../../../store/authStore";
-import { useTheme } from "../../../theme/ThemeContext";
 import { useDialog } from "../../../components/Dialog/DialogProvider";
+import { useAuthStore } from "../../../store/authStore";
 import { useLayoutStore } from "../../../store/layoutStore";
 import { Spacing } from "../../../theme/spacing";
+import { useTheme } from "../../../theme/ThemeContext";
+import { extractErrorMessage, profileApi } from "../api/profile.api";
+import { useAddresses } from "../hooks/useAddresses";
+import { useAddressMutations } from "../hooks/useAddressMutations";
+import { useProfile } from "../hooks/useProfile";
 
 export function ProfileScreen() {
   const { colors, isDark } = useTheme();
   const { confirm, alert } = useDialog();
   const bottomTabBarHeight = useLayoutStore((s) => s.bottomTabBarHeight);
-
+  const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+  const buildNumber =
+    Constants.expoConfig?.ios?.buildNumber ||
+    Constants.expoConfig?.android?.versionCode ||
+    "";
+  const displayVersion = buildNumber
+    ? `v${appVersion} (${buildNumber})`
+    : `v${appVersion}`;
   const {
     user,
     isLoading: profileLoading,
@@ -319,7 +326,7 @@ export function ProfileScreen() {
             { color: colors.text.disabled, fontFamily: "Inter_400Regular" },
           ]}
         >
-          Cureli v1.0.0
+          Cureli v{appVersion}
         </Text>
 
         <LogoutButton />
