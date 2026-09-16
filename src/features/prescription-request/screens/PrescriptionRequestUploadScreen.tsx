@@ -1,30 +1,27 @@
 // src/features/prescription-request/screens/PrescriptionRequestUploadScreen.tsx
-// Step 1 — Upload prescription images + choose delivery address
-//
-// Changes in this version:
-//   - Pending thumbnails: appear instantly when user picks files (before upload)
-//   - Per-file progress: each pending card swaps to confirmed card as upload completes
-//   - Active request banner (currentRequestId set) — Option B: show banner,
-//     let user navigate manually or dismiss to start fresh
-//   - Draft resume banner (files uploaded but not submitted)
-//   - Both banners are mutually exclusive; active request takes priority
+// Step 1 — Upload prescription or medicine photos + choose delivery address
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Image,
   ActivityIndicator,
+  Animated,
+  Easing,
+  Platform,
+  UIManager,
+  LayoutAnimation,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { useDialog } from "../../../components/Dialog/DialogProvider";
 import { useTheme } from "../../../theme/ThemeContext";
 import { Spacing } from "../../../theme/spacing";
@@ -35,6 +32,11 @@ import { useAddresses } from "../../profile/hooks/useAddresses";
 import { AddressPickerSheet } from "../../cart/components/AddressPickerSheet";
 import { useDeliveryLocationStore } from "../../../store/deliveryLocationStore";
 
+// Enable layout animations on Android
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type PendingAsset = {
@@ -43,9 +45,315 @@ type PendingAsset = {
   mimeType?: string;
 };
 
+// ── Animated Hero Illustration ────────────────────────────────────────────────
+// Displays an animated dual-card visual (Prescription vs Medicine Pack) with a scan beam
+
+function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
+  // Floating animations
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
+  // Pulse animation for "OR" badge
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  // Laser scan beam translation
+  const scanAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // 1. Floating card 1 (Prescription)
+    const loopFloat1 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim1, {
+          toValue: -6,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim1, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // 2. Floating card 2 (Medicine pack) - slightly delayed
+    const loopFloat2 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim2, {
+          toValue: -7,
+          duration: 2100,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim2, {
+          toValue: 0,
+          duration: 2100,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // 3. Pulse "OR" badge
+    const loopPulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.12,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // 4. Scanning laser beam
+    const loopScan = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanAnim, {
+          toValue: 1,
+          duration: 2400,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanAnim, {
+          toValue: 0,
+          duration: 2400,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    loopFloat1.start();
+    loopFloat2.start();
+    loopPulse.start();
+    loopScan.start();
+
+    return () => {
+      loopFloat1.stop();
+      loopFloat2.stop();
+      loopPulse.stop();
+      loopScan.stop();
+    };
+  }, [floatAnim1, floatAnim2, pulseAnim, scanAnim]);
+
+  const scanTranslateY = scanAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [4, 116],
+  });
+
+  return (
+    <View
+      style={[
+        styles.heroContainer,
+        {
+          backgroundColor: colors.background.card,
+          borderColor: colors.border.default,
+        },
+      ]}
+    >
+      {/* Background soft ambient gradient */}
+      <LinearGradient
+        colors={[
+          colors.brand.primary + "12",
+          colors.background.tint + "40",
+          "transparent",
+        ]}
+        style={StyleSheet.absoluteFillObject}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
+
+      {/* Visual stage with Prescription + OR + Medicine */}
+      <View style={styles.heroVisualStage}>
+        {/* Animated Laser Scan Beam */}
+        <Animated.View
+          style={[
+            styles.scanBeam,
+            {
+              backgroundColor: colors.brand.primary,
+              shadowColor: colors.brand.primary,
+              transform: [{ translateY: scanTranslateY }],
+            },
+          ]}
+        />
+
+        {/* Card 1: Doctor Prescription */}
+        <Animated.View
+          style={[
+            styles.heroVisualCard,
+            {
+              backgroundColor: colors.background.page,
+              borderColor: colors.border.brand + "70",
+              transform: [{ translateY: floatAnim1 }],
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.cardHeaderIcon,
+              { backgroundColor: colors.brand.primary + "18" },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="file-document-edit-outline"
+              size={22}
+              color={colors.brand.primary}
+            />
+          </View>
+          <View style={styles.cardLines}>
+            <View
+              style={[
+                styles.cardLine,
+                { width: "75%", backgroundColor: colors.brand.primary + "35" },
+              ]}
+            />
+            <View
+              style={[
+                styles.cardLine,
+                { width: "90%", backgroundColor: colors.border.default },
+              ]}
+            />
+            <View
+              style={[
+                styles.cardLine,
+                { width: "60%", backgroundColor: colors.border.default },
+              ]}
+            />
+          </View>
+          <View
+            style={[
+              styles.cardBadge,
+              { backgroundColor: colors.brand.primary + "15" },
+            ]}
+          >
+            <Text
+              style={[styles.cardBadgeText, { color: colors.brand.primary }]}
+            >
+              Doctor Rx
+            </Text>
+          </View>
+        </Animated.View>
+
+        {/* Middle: OR Badge */}
+        <Animated.View
+          style={[
+            styles.orCircle,
+            {
+              backgroundColor: colors.brand.primary,
+              transform: [{ scale: pulseAnim }],
+            },
+          ]}
+        >
+          <Text style={styles.orText}>OR</Text>
+        </Animated.View>
+
+        {/* Card 2: Medicine Box / Blister Strip */}
+        <Animated.View
+          style={[
+            styles.heroVisualCard,
+            {
+              backgroundColor: colors.background.page,
+              borderColor: colors.status.infoBorder ?? (colors.brand.primary + "70"),
+              transform: [{ translateY: floatAnim2 }],
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.cardHeaderIcon,
+              { backgroundColor: "#0284C718" },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="pill-multiple"
+              size={22}
+              color="#0284C7"
+            />
+          </View>
+
+          {/* Mini pill strip representation */}
+          <View style={styles.stripGrid}>
+            <View style={[styles.stripDot, { backgroundColor: "#0284C740" }]} />
+            <View style={[styles.stripDot, { backgroundColor: "#0284C740" }]} />
+            <View style={[styles.stripDot, { backgroundColor: "#0284C740" }]} />
+            <View style={[styles.stripDot, { backgroundColor: "#0284C740" }]} />
+          </View>
+
+          <View
+            style={[
+              styles.cardBadge,
+              { backgroundColor: "#0284C715" },
+            ]}
+          >
+            <Text style={[styles.cardBadgeText, { color: "#0284C7" }]}>
+              Medicine Strip
+            </Text>
+          </View>
+        </Animated.View>
+      </View>
+
+      {/* Hero Headings */}
+      <View style={styles.heroTextSection}>
+        <Text style={[styles.heroHeading, { color: colors.text.primary }]}>
+          Prescription or Medicine Photo
+        </Text>
+        <Text style={[styles.heroDescription, { color: colors.text.secondary }]}>
+          Upload your <Text style={styles.heroHighlight}>doctor's prescription</Text> or simply snap a clear photo of the <Text style={styles.heroHighlight}>medicine box or strip</Text>.
+        </Text>
+      </View>
+
+      {/* Feature Pills */}
+      <View style={styles.featureChipsRow}>
+        <View
+          style={[
+            styles.featureChip,
+            { backgroundColor: colors.background.tint },
+          ]}
+        >
+          <Ionicons
+            name="camera-outline"
+            size={13}
+            color={colors.text.brand}
+          />
+          <Text
+            style={[styles.featureChipText, { color: colors.text.brand }]}
+          >
+            Snap Strip/Box
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.featureChip,
+            { backgroundColor: colors.background.tint },
+          ]}
+        >
+          <Ionicons
+            name="document-text-outline"
+            size={13}
+            color={colors.text.brand}
+          />
+          <Text
+            style={[styles.featureChipText, { color: colors.text.brand }]}
+          >
+            Prescription / PDF
+          </Text>
+        </View>
+
+        
+      </View>
+    </View>
+  );
+}
+
 // ── PendingThumbnail ──────────────────────────────────────────────────────────
-// Shown immediately after the user picks a file, before the upload completes.
-// Displays a dimmed preview with a spinner overlay.
 
 function PendingThumbnail({
   asset,
@@ -67,7 +375,6 @@ function PendingThumbnail({
         },
       ]}
     >
-      {/* Dimmed preview */}
       {!isPdf ? (
         <Image
           source={{ uri: asset.uri }}
@@ -83,12 +390,10 @@ function PendingThumbnail({
         />
       )}
 
-      {/* Spinner overlay — sits on top of the dimmed preview */}
       <View style={styles.pendingOverlay}>
         <ActivityIndicator size="small" color={colors.brand.primary} />
       </View>
 
-      {/* File name */}
       <Text
         style={[styles.fileName, { color: colors.text.faint }]}
         numberOfLines={1}
@@ -123,9 +428,6 @@ export function PrescriptionRequestUploadScreen() {
   const deliveryLocation = useDeliveryLocationStore((s) => s.location);
 
   const [addressSheetVisible, setAddressSheetVisible] = useState(false);
-
-  // Tracks files that have been picked but not yet confirmed by the server.
-  // Rendered as skeleton cards with spinners in the grid.
   const [pendingAssets, setPendingAssets] = useState<PendingAsset[]>([]);
 
   // ── Address resolution ──────────────────────────────────────────────────
@@ -137,7 +439,7 @@ export function PrescriptionRequestUploadScreen() {
     ? addresses.find((a) => a.id === effectiveAddressId)
     : (addresses.find((a) => a.is_default) ?? addresses[0]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selectedAddressId) {
       if (deliveryLocation.addressId) {
         setSelectedAddress(deliveryLocation.addressId);
@@ -169,7 +471,6 @@ export function PrescriptionRequestUploadScreen() {
 
       let assets: PendingAsset[] = [];
 
-      // ── Picker phase ──────────────────────────────────────────────
       if (source === "gallery") {
         const { status } =
           await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -229,14 +530,12 @@ export function PrescriptionRequestUploadScreen() {
 
       if (assets.length === 0) return;
 
-      // ── Show pending thumbnails immediately after picker closes ───
-      // The user sees skeleton cards with spinners before any network call.
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       const slicedAssets = assets.slice(0, remainingSlots);
       setPendingAssets(slicedAssets);
       setUploading(true);
       setUploadError(null);
 
-      // ── Upload phase — one file at a time ─────────────────────────
       try {
         for (const asset of slicedAssets) {
           const formData = new FormData();
@@ -250,11 +549,11 @@ export function PrescriptionRequestUploadScreen() {
           const uploaded = res.data?.data?.files ?? [];
 
           for (const file of uploaded) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             addUploadedFile({ ...file, uri: asset.uri });
           }
 
-          // Remove this specific asset from pending once its upload finishes.
-          // The confirmed thumbnail takes its visual place in the grid.
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
           setPendingAssets((prev) => prev.filter((p) => p.uri !== asset.uri));
         }
       } catch (err: any) {
@@ -262,16 +561,13 @@ export function PrescriptionRequestUploadScreen() {
           message: err?.message,
           response: err?.response?.data,
           status: err?.response?.status,
-          config: err?.config,
         });
-        // Clear all pending cards on failure — they won't become real files.
         setPendingAssets([]);
         const msg =
           err?.response?.data?.message ?? "Upload failed. Please try again.";
         setUploadError(msg);
       } finally {
         setUploading(false);
-        // Safety net in case a pending asset slipped through.
         setPendingAssets([]);
       }
     },
@@ -283,6 +579,14 @@ export function PrescriptionRequestUploadScreen() {
       setUploadError,
       showAlert,
     ],
+  );
+
+  const handleRemoveFile = useCallback(
+    (fileKey: string) => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      removeUploadedFile(fileKey);
+    },
+    [removeUploadedFile]
   );
 
   const handleNext = useCallback(() => {
@@ -299,8 +603,6 @@ export function PrescriptionRequestUploadScreen() {
   const gridSectionTitle = isUploading
     ? `Uploading… (${uploadedFiles.length} of ${totalInFlight})`
     : `Uploaded (${uploadedFiles.length}/5)`;
-
-  // ── Render ──────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView
@@ -325,7 +627,7 @@ export function PrescriptionRequestUploadScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
-          Upload Prescription
+          Upload Prescription / Medicine
         </Text>
         <View style={styles.stepIndicator}>
           <Text style={[styles.stepText, { color: colors.text.muted }]}>
@@ -428,26 +730,8 @@ export function PrescriptionRequestUploadScreen() {
           </View>
         )}
 
-        {/* ── Info card ────────────────────────────────────────────── */}
-        <View
-          style={[
-            styles.infoCard,
-            {
-              backgroundColor: colors.background.tint,
-              borderColor: colors.border.brand,
-            },
-          ]}
-        >
-          <Ionicons
-            name="information-circle-outline"
-            size={18}
-            color={colors.text.brand}
-          />
-          <Text style={[styles.infoText, { color: colors.text.secondary }]}>
-            Upload your doctor's prescription and we'll send it to nearby
-            pharmacies. They'll prepare a quote for you to review.
-          </Text>
-        </View>
+        {/* ── Animated Illustration Hero Card ──────────────────────── */}
+        <PrescriptionUploadHeroIllustration colors={colors} />
 
         {/* ── File grid (confirmed + pending) ──────────────────────── */}
         {showGrid && (
@@ -456,7 +740,7 @@ export function PrescriptionRequestUploadScreen() {
               {gridSectionTitle}
             </Text>
             <View style={styles.fileGrid}>
-              {/* Confirmed uploads — solid border, remove button visible */}
+              {/* Confirmed uploads */}
               {uploadedFiles.map((file) => (
                 <View
                   key={file.file_key}
@@ -488,7 +772,7 @@ export function PrescriptionRequestUploadScreen() {
                     {file.original_name}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => removeUploadedFile(file.file_key)}
+                    onPress={() => handleRemoveFile(file.file_key)}
                     style={styles.removeBtn}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
@@ -501,7 +785,7 @@ export function PrescriptionRequestUploadScreen() {
                 </View>
               ))}
 
-              {/* Pending uploads — dashed border, spinner overlay */}
+              {/* Pending uploads */}
               {pendingAssets.map((asset) => (
                 <PendingThumbnail
                   key={asset.uri}
@@ -540,7 +824,7 @@ export function PrescriptionRequestUploadScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
               {uploadedFiles.length === 0
-                ? "Add prescription"
+                ? "Add prescription or medicine photo"
                 : `Add more (${remainingSlots} left)`}
             </Text>
             <View style={styles.uploadOptions}>
@@ -736,7 +1020,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "Inter_600SemiBold",
   },
   stepIndicator: {
@@ -759,20 +1043,145 @@ const styles = StyleSheet.create({
   bannerText: { flex: 1, fontSize: 13 },
   bannerCta: { fontSize: 13 },
 
-  // Info card
-  infoCard: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: Radius.lg,
+  // Hero Animated Card
+  heroContainer: {
+    borderRadius: Radius.xl ?? 18,
     borderWidth: 1,
-    alignItems: "flex-start",
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.base,
+    alignItems: "center",
+    overflow: "hidden",
+    gap: Spacing.md,
   },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
+  heroVisualStage: {
+    width: "100%",
+    height: 120,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    gap: Spacing.md,
+  },
+  scanBeam: {
+    position: "absolute",
+    top: -5,
+    left: "10%",
+    right: "10%",
+    height: 2,
+    borderRadius: 1,
+    opacity: 0.6,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    elevation: 3,
+    zIndex: 10,
+  },
+  heroVisualCard: {
+    width: 108,
+    height: 104,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    padding: Spacing.xs,
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.full ?? 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardLines: {
+    width: "100%",
+    gap: 4,
+    alignItems: "center",
+  },
+  cardLine: {
+    height: 3,
+    borderRadius: 2,
+  },
+  stripGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: 36,
+    gap: 4,
+    justifyContent: "center",
+  },
+  stripDot: {
+    width: 12,
+    height: 6,
+    borderRadius: 3,
+  },
+  cardBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  cardBadgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+  },
+  orCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 5,
+  },
+  orText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+  },
+  heroTextSection: {
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: Spacing.xs,
+  },
+  heroHeading: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+  },
+  heroDescription: {
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
-    lineHeight: 20,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  heroHighlight: {
+    fontFamily: "Inter_600SemiBold",
+  },
+  featureChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: Spacing.xs,
+    marginTop: 2,
+  },
+  featureChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.full ?? 16,
+  },
+  featureChipText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
   },
 
   // Section
@@ -803,12 +1212,11 @@ const styles = StyleSheet.create({
   },
   removeBtn: { position: "absolute", top: 2, right: 2 },
 
-  // Pending thumbnail overlay — sits on top of the dimmed preview
+  // Pending thumbnail overlay
   pendingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    // semi-transparent white so the preview is visible but clearly "in progress"
     backgroundColor: "rgba(255,255,255,0.45)",
   },
 
