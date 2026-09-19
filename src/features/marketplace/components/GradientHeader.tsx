@@ -251,7 +251,7 @@ function GradientHeaderBase({
         pointerEvents="none"
       >
         <LinearGradient
-          colors={[h.gradientTo, colors.background.page]}
+          colors={[h.gradientTo, colors.background.trans]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles.fadeStripGradient}
