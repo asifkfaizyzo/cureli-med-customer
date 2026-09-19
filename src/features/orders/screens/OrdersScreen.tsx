@@ -1,14 +1,4 @@
 // src/features/orders/screens/OrdersScreen.tsx
-//
-// Changes in this version:
-//   - isActivePrescription() helper fixes the FULLY_RESPONDED + quoted_count
-//     bug where "all pharmacies declined" was wrongly counted as active
-//   - Count bubbles on inner segmented tab labels
-//     · Orders tab    → red bubble    (PLACED / ACCEPTED / READY_FOR_PICKUP)
-//     · Prescriptions → brand bubble  (PENDING / PARTIALLY_RESPONDED /
-//                                      FULLY_RESPONDED with quoted_count > 0)
-//   - Bubbles always visible until every active item resolves
-//   - No changes to badge store or layout
 
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -43,29 +33,13 @@ import {
 }                                      from '../constants/prescriptionRequest.constants';
 import type { MobileOrderSummary }     from '../../../types/order';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
 type Tab = 'orders' | 'prescriptions';
-
-// ── Active prescription helper ────────────────────────────────────────────────
-//
-// A prescription request counts as "active" (needs user attention) when:
-//   1. Status is PENDING or PARTIALLY_RESPONDED — waiting for pharmacy responses
-//   2. Status is FULLY_RESPONDED AND quoted_count > 0 — quotes to review
-//
-// FULLY_RESPONDED with quoted_count === 0 means all pharmacies declined.
-// There is nothing the user can do — it should NOT count as active.
-//
-// PRX_ACTIVE_STATUSES no longer contains FULLY_RESPONDED so this helper
-// is the single place that encodes this rule.
 
 function isActivePrescription(p: PrescriptionRequestSummary): boolean {
   if (PRX_ACTIVE_STATUSES.has(p.status)) return true;
   if (p.status === 'FULLY_RESPONDED' && p.quoted_count > 0) return true;
   return false;
 }
-
-// ── Small reusable count bubble ───────────────────────────────────────────────
 
 interface CountBubbleProps {
   count:           number;
@@ -83,41 +57,32 @@ function CountBubble({ count, backgroundColor }: CountBubbleProps) {
   );
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
 export function OrdersScreen() {
   const { colors, isDark } = useTheme();
   const brandColor         = isDark ? colors.brand.accent : colors.brand.primary;
   const bottomTabBarHeight = useLayoutStore((s) => s.bottomTabBarHeight);
 
-  // ── Tab state ──────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<Tab>('orders');
 
-  // ── Badge store ────────────────────────────────────────────────────────
   const setHasActiveOrders        = useTabBadgeStore((s) => s.setHasActiveOrders);
   const setHasActivePrescriptions = useTabBadgeStore((s) => s.setHasActivePrescriptions);
 
-  // ── Prescription draft state ───────────────────────────────────────────
   const draftFiles     = usePrescriptionRequestStore((s) => s.uploadedFiles);
   const currentDraftId = usePrescriptionRequestStore((s) => s.currentRequestId);
 
-  // ── Notification store ─────────────────────────────────────────────────
   const lastStatusUpdate      = useOrderNotificationStore((s) => s.lastStatusUpdate);
   const clearLastStatusUpdate = useOrderNotificationStore((s) => s.clearLastStatusUpdate);
 
-  // ── Orders state ───────────────────────────────────────────────────────
   const [orders,       setOrders]       = useState<MobileOrderSummary[]>([]);
   const [isLoading,    setIsLoading]    = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // ── Prescription requests (React Query) ───────────────────────────────
   const {
     data:      prxList,
     isLoading: prxLoading,
     refetch:   refetchPrx,
   } = usePrescriptionRequests();
 
-  // ── Fetch orders ───────────────────────────────────────────────────────
   const fetchOrders = useCallback(async (silent = false) => {
     try {
       if (!silent) setIsLoading(true);
@@ -131,56 +96,43 @@ export function OrdersScreen() {
     }
   }, []);
 
-  // Fetch on focus
   useFocusEffect(
     useCallback(() => {
       fetchOrders();
     }, [fetchOrders]),
   );
 
-  // Refetch when SSE signals a status change
   useEffect(() => {
     if (!lastStatusUpdate) return;
     fetchOrders(true);
     clearLastStatusUpdate();
   }, [lastStatusUpdate, fetchOrders, clearLastStatusUpdate]);
 
-  // ── Active counts for inner tab bubbles ───────────────────────────────
-  // Derived directly from live data — no extra state needed.
-
   const activeOrderCount = orders.filter((o: MobileOrderSummary) =>
     ORDER_ACTIVE_STATUSES.has(o.status),
   ).length;
 
-  // Uses isActivePrescription() — correctly excludes FULLY_RESPONDED
-  // where all pharmacies declined (quoted_count === 0).
   const activePrxCount = (prxList ?? []).filter(
     (p: PrescriptionRequestSummary) => isActivePrescription(p),
   ).length;
 
-  // ── Badge sync — orders ────────────────────────────────────────────────
   useEffect(() => {
     setHasActiveOrders(activeOrderCount > 0);
   }, [activeOrderCount, setHasActiveOrders]);
 
-  // ── Badge sync — prescriptions ─────────────────────────────────────────
   useEffect(() => {
     setHasActivePrescriptions(activePrxCount > 0);
   }, [activePrxCount, setHasActivePrescriptions]);
 
-  // ── Pull-to-refresh ────────────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await Promise.all([fetchOrders(true), refetchPrx()]);
     setIsRefreshing(false);
   }, [fetchOrders, refetchPrx]);
 
-  // ── Navigation ─────────────────────────────────────────────────────────
   const handleOpenOrder = (orderId: string) => {
     router.push(`/orders/${orderId}` as any);
   };
-
-  // ── Sub-components ─────────────────────────────────────────────────────
 
   const DraftBanner = useCallback(() => {
     if (draftFiles.length === 0 || currentDraftId !== null) return null;
@@ -308,14 +260,12 @@ export function OrdersScreen() {
     </View>
   );
 
-  // ── Render ─────────────────────────────────────────────────────────────
-
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background.page }]}
       edges={['top']}
     >
-      {/* ── Header ─────────────────────────────────────────────────── */}
+      {/* Header */}
       <View
         style={[
           styles.header,
@@ -335,7 +285,7 @@ export function OrdersScreen() {
         </Text>
       </View>
 
-      {/* ── Segmented tab control ───────────────────────────────────── */}
+      {/* Segmented tab control */}
       <View
         style={[
           styles.tabStrip,
@@ -345,7 +295,6 @@ export function OrdersScreen() {
           },
         ]}
       >
-        {/* Orders segment */}
         <TouchableOpacity
           onPress={() => setActiveTab('orders')}
           activeOpacity={0.7}
@@ -373,7 +322,6 @@ export function OrdersScreen() {
             >
               Orders
             </Text>
-            {/* Red bubble — active orders count */}
             <CountBubble
               count={activeOrderCount}
               backgroundColor={colors.status.error}
@@ -381,7 +329,6 @@ export function OrdersScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Prescriptions segment */}
         <TouchableOpacity
           onPress={() => setActiveTab('prescriptions')}
           activeOpacity={0.7}
@@ -409,7 +356,6 @@ export function OrdersScreen() {
             >
               Prescriptions
             </Text>
-            {/* Brand bubble — active prescription requests count */}
             <CountBubble
               count={activePrxCount}
               backgroundColor={brandColor}
@@ -418,7 +364,7 @@ export function OrdersScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ── Orders tab ──────────────────────────────────────────────── */}
+      {/* Orders tab content */}
       {activeTab === 'orders' && (
         <>
           {isLoading ? (
@@ -451,7 +397,7 @@ export function OrdersScreen() {
         </>
       )}
 
-      {/* ── Prescriptions tab ───────────────────────────────────────── */}
+      {/* Prescriptions tab content */}
       {activeTab === 'prescriptions' && (
         <>
           {prxLoading ? (
@@ -499,19 +445,14 @@ export function OrdersScreen() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-
   header: {
     paddingHorizontal: 16,
     paddingVertical:   16,
     borderBottomWidth: 1,
   },
   headerTitle: { fontSize: 22 },
-
-  // Segmented control
   tabStrip: {
     flexDirection:     'row',
     borderBottomWidth: 1,
@@ -523,17 +464,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-
-  // Row that holds the label text + bubble side by side
   tabLabelRow: {
     flexDirection: 'row',
     alignItems:    'center',
     gap:           6,
   },
-
   tabSegmentText: { fontSize: 14 },
-
-  // Count bubble
   countBubble: {
     minWidth:          18,
     height:            18,
@@ -548,14 +484,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     lineHeight: 13,
   },
-
-  // Lists
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listHeader:       { height: 12 },
   listFooter:       { height: 8 },
   emptyList:        { flex: 1 },
-
-  // Empty states
   emptyContainer: {
     flex:           1,
     alignItems:     'center',
@@ -580,8 +512,6 @@ const styles = StyleSheet.create({
     borderRadius:      12,
   },
   ctaButtonText: { fontSize: 14, color: '#ffffff' },
-
-  // Draft banner
   draftCard: {
     flexDirection:    'row',
     alignItems:       'center',

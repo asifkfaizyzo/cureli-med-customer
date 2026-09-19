@@ -1,54 +1,49 @@
 // src/features/orders/screens/OrderDetailScreen.tsx
-// Updated: Added "Download Invoice" button for READY_FOR_PICKUP and COMPLETED orders.
-// Updated: Added "Need help with this order?" support ticket button for COMPLETED orders.
 
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, {
   useCallback,
   useEffect,
-  useState,
-  useRef,
   useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
   ActivityIndicator,
-  Modal,
-  Image,
   Dimensions,
+  Image,
+  Modal,
+  ScrollView,
   StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import * as WebBrowser from "expo-web-browser";
 import { useDialog } from "../../../components/Dialog/DialogProvider";
-import { useTheme } from "../../../theme/ThemeContext";
-import { PriceRow } from "../components/PriceRow";
-import { ReorderSheet } from "../components/ReorderSheet";
 import { RemoteImage } from "../../../components/RemoteImage";
-import { ordersApi } from "../../marketplace/api/orders.api";
 import { useOrderNotificationStore } from "../../../store/orderNotificationStore";
-import {
-  getStatusLabel,
-  getStatusColorKey,
-  getStatusIcon,
-  getRejectionLabel,
-  formatDeliveryDate,
-} from "../constants/orders.constants";
+import { useTheme } from "../../../theme/ThemeContext";
 import type {
   MobileOrderDetail,
   MobileOrderPrescription,
   ReorderItemsResponse,
 } from "../../../types/order";
+import { ordersApi } from "../../marketplace/api/orders.api";
+import { PriceRow } from "../components/PriceRow";
+import { ReorderSheet } from "../components/ReorderSheet";
+import {
+  formatDeliveryDate,
+  getRejectionLabel,
+  getStatusColorKey,
+  getStatusIcon,
+  getStatusLabel,
+} from "../constants/orders.constants";
 
 const TERMINAL_STATUSES = new Set(["COMPLETED", "CANCELLED", "REJECTED"]);
-
-// Statuses where the invoice is available to download
 const INVOICE_STATUSES = new Set(["READY_FOR_PICKUP", "COMPLETED"]);
 
 function safeNum(value: number | null | undefined): number | null {
@@ -79,7 +74,6 @@ function getRelativeTime(dateString: string): string | null {
   }
 }
 
-// ── ImagePreviewModal — unchanged ─────────────────────────────────────────────
 interface ImagePreviewModalProps {
   url: string;
   name: string;
@@ -161,7 +155,6 @@ const previewStyles = StyleSheet.create({
   },
 });
 
-// ── PrescriptionRow — unchanged ───────────────────────────────────────────────
 interface PrescriptionRowProps {
   prescription: MobileOrderPrescription;
   orderId: string;
@@ -198,8 +191,7 @@ function PrescriptionRow({
         await WebBrowser.openBrowserAsync(url);
       }
     } catch (err: any) {
-      const status = err?.response?.status;
-      if (status === 410) {
+      if (err?.response?.status === 410) {
         await showAlert({
           title: "Expired",
           message: "This prescription file has been deleted.",
@@ -294,7 +286,6 @@ function PrescriptionRow({
   );
 }
 
-// ── Main screen ───────────────────────────────────────────────────────────────
 interface OrderDetailScreenProps {
   orderId: string;
 }
@@ -316,8 +307,6 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     null,
   );
   const [reorderLoading, setReorderLoading] = useState(false);
-
-  // ── NEW: invoice download state ───────────────────────────────────────────
   const [invoiceLoading, setInvoiceLoading] = useState(false);
 
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
@@ -409,7 +398,6 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     }
   }, [orderId, showAlert]);
 
-  // ── NEW: Download invoice handler ─────────────────────────────────────────
   const handleDownloadInvoice = useCallback(async () => {
     setInvoiceLoading(true);
     try {
@@ -435,7 +423,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     }
   }, [orderId, showAlert]);
 
-  // All useMemos before early returns
+  // Calculations
   const billSubtotal = useMemo(() => {
     if (!order) return 0;
     return (
@@ -460,6 +448,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     [order],
   );
   const billTip = useMemo(() => (order ? safeNum(order.tip) : null), [order]);
+
   const billGrandTotal = useMemo(() => {
     if (!order) return 0;
     return (
@@ -486,7 +475,6 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     billKmSurcharge,
   ]);
 
-  // Loading guard
   if (isLoading) {
     return (
       <SafeAreaView
@@ -527,9 +515,15 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     );
   }
 
-  const colorKey = getStatusColorKey(order.status);
-  const statusIcon = getStatusIcon(order.status) as any;
-  const statusLabel = getStatusLabel(order.status);
+  // ── NEW: Dynamic Refund Status Override ────────────────────
+  const isRefunded =
+    order.status === "CANCELLED" && order.payment_status === "REFUNDED";
+
+  const colorKey = isRefunded ? "success" : getStatusColorKey(order.status);
+  const statusIcon = (
+    isRefunded ? "refresh-circle-outline" : getStatusIcon(order.status)
+  ) as any;
+  const statusLabel = isRefunded ? "Refunded" : getStatusLabel(order.status);
 
   const statusFg =
     colorKey === "success"
@@ -548,6 +542,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
         : colorKey === "warning"
           ? colors.status.warningBg
           : colors.background.tint;
+  // ──────────────────────────────────────────────────────────
 
   const addr = order.delivery_address;
   const addressLine = addr
@@ -576,7 +571,40 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
       value: order.branch_name ?? "—",
     },
     { icon: "location-outline", label: "Delivery Address", value: addressLine },
-    { icon: "wallet-outline", label: "Payment", value: order.payment_method },
+        {
+      icon: "wallet-outline",
+      label: "Payment",
+      value: (() => {
+        const method = order.payment_method ?? "COD";
+        const status = order.payment_status;
+
+        // Parse Razorpay mode into friendly label
+        let methodLabel = method;
+        if (method.startsWith("RAZORPAY_")) {
+          const mode = method.replace("RAZORPAY_", "");
+          const modeMap: Record<string, string> = {
+            UPI: "UPI",
+            CARD: "Card",
+            NETBANKING: "Net Banking",
+            WALLET: "Wallet",
+            EMI: "EMI",
+          };
+          methodLabel = modeMap[mode] ?? "Online";
+        } else if (method === "RAZORPAY") {
+          methodLabel = "Online";
+        } else if (method === "COD") {
+          methodLabel = "Cash on Delivery";
+        }
+
+        // Only show status badge if it adds useful info
+        if (status === "PAID") return `${methodLabel} · Paid`;
+        if (status === "REFUNDED") return `${methodLabel} · Refunded`;
+        if (status === "PARTIALLY_REFUNDED") return `${methodLabel} · Partially Refunded`;
+        if (status === "FAILED") return `${methodLabel} · Failed`;
+        if (status === "PENDING") return `${methodLabel} · Pending`;
+        return methodLabel;
+      })(),
+    },
     {
       icon: "time-outline",
       label: "Order Placed",
@@ -593,7 +621,6 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
       : []),
   ];
 
-  // Whether to show the invoice download button
   const showInvoiceButton = INVOICE_STATUSES.has(order.status);
 
   return (
@@ -695,79 +722,102 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
             )}
           </View>
 
-          {order.items.map((item, index) => (
-            <View key={item.item_id}>
-              {index > 0 && (
-                <View
-                  style={[
-                    styles.itemDivider,
-                    { backgroundColor: colors.border.subtle },
-                  ]}
-                />
-              )}
-              <View style={styles.itemRow}>
-                <RemoteImage
-                  uri={(item as any).image_url ?? null}
-                  style={[
-                    styles.itemImageWrap,
-                    {
-                      backgroundColor: colors.background.elevated,
-                      borderColor: colors.border.subtle,
-                    },
-                  ]}
-                  resizeMode="contain"
-                  mode="medicine"
-                />
-                <View style={styles.itemInfo}>
-                  <Text
+          {order.items.map((item, index) => {
+            // ── NEW: MRP discount strike-through calculation ───────
+            const showMrpDiscount = item.mrp > item.unit_price;
+            // ────────────────────────────────────────────────────────
+
+            return (
+              <View key={item.item_id}>
+                {index > 0 && (
+                  <View
                     style={[
-                      styles.itemName,
+                      styles.itemDivider,
+                      { backgroundColor: colors.border.subtle },
+                    ]}
+                  />
+                )}
+                <View style={styles.itemRow}>
+                  <RemoteImage
+                    uri={(item as any).image_url ?? null}
+                    style={[
+                      styles.itemImageWrap,
                       {
-                        color: colors.text.primary,
-                        fontFamily: "Inter_600SemiBold",
+                        backgroundColor: colors.background.elevated,
+                        borderColor: colors.border.subtle,
                       },
                     ]}
-                    numberOfLines={2}
-                  >
-                    {item.medicine_name}
-                  </Text>
-                  {item.brand && (
+                    resizeMode="contain"
+                    mode="medicine"
+                  />
+                  <View style={styles.itemInfo}>
                     <Text
                       style={[
-                        styles.itemBrand,
+                        styles.itemName,
                         {
-                          color: colors.text.faint,
-                          fontFamily: "Inter_400Regular",
+                          color: colors.text.primary,
+                          fontFamily: "Inter_600SemiBold",
                         },
                       ]}
+                      numberOfLines={2}
                     >
-                      {item.brand}
-                      {item.pack_size ? ` · ${item.pack_size}` : ""}
+                      {item.medicine_name}
                     </Text>
-                  )}
+                    {item.brand && (
+                      <Text
+                        style={[
+                          styles.itemBrand,
+                          {
+                            color: colors.text.faint,
+                            fontFamily: "Inter_400Regular",
+                          },
+                        ]}
+                      >
+                        {item.brand}
+                        {item.pack_size ? ` · ${item.pack_size}` : ""}
+                      </Text>
+                    )}
+
+                    {/* Item Unit Prices & Discount calculations */}
+                    <View style={styles.priceContainer}>
+                      <Text
+                        style={[
+                          styles.itemQty,
+                          {
+                            color: colors.text.muted,
+                            fontFamily: "Inter_400Regular",
+                          },
+                        ]}
+                      >
+                        Qty: {item.quantity} · {formatCurrency(item.unit_price)}
+                      </Text>
+                      {showMrpDiscount && (
+                        <Text
+                          style={[
+                            styles.originalMrp,
+                            { color: colors.text.faint },
+                          ]}
+                        >
+                          {formatCurrency(item.mrp)}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
                   <Text
                     style={[
-                      styles.itemQty,
+                      styles.itemPrice,
                       {
-                        color: colors.text.muted,
-                        fontFamily: "Inter_400Regular",
+                        color: colors.text.primary,
+                        fontFamily: "Inter_700Bold",
                       },
                     ]}
                   >
-                    Qty: {item.quantity}
+                    {formatCurrency(safeNum(item.line_total) ?? 0)}
                   </Text>
                 </View>
-                <Text
-                  style={[
-                    styles.itemPrice,
-                    { color: colors.text.primary, fontFamily: "Inter_700Bold" },
-                  ]}
-                >
-                  {formatCurrency(safeNum(item.line_total) ?? 0)}
-                </Text>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Prescriptions */}
@@ -832,16 +882,16 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
           </Text>
           <View style={styles.priceRows}>
             <PriceRow
-              label="Items total"
+              label="Items subtotal"
               value={formatCurrency(billSubtotal)}
             />
-            {billServiceCharge != null && (
+            {billServiceCharge != null && billServiceCharge > 0 && (
               <PriceRow
                 label="Service charge"
                 value={formatCurrency(billServiceCharge)}
               />
             )}
-            {billDeliveryFee != null && (
+            {billDeliveryFee != null && billDeliveryFee > 0 && (
               <PriceRow
                 label="Delivery fee"
                 value={formatCurrency(billDeliveryFee)}
@@ -856,7 +906,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
             {billTip != null && billTip > 0 && (
               <PriceRow label="Tip" value={formatCurrency(billTip)} />
             )}
-            {billOtherCharges != null && (
+            {billOtherCharges != null && billOtherCharges > 0 && (
               <PriceRow
                 label="Delivery & charges"
                 value={formatCurrency(billOtherCharges)}
@@ -930,201 +980,330 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
           ))}
         </View>
 
-        {/* Status Timeline */}
-        {order.status_history.length > 0 && (
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: colors.background.card,
-                borderColor: colors.border.default,
-              },
-            ]}
-          >
-            <Text
+                {/* ── Unified Timeline (Order Status + Payment Milestones) ── */}
+        {(() => {
+          // Build a unified timeline by merging order status history
+          // with synthesized payment milestones.
+
+          interface TimelineEntry {
+            id: string;
+            label: string;
+            icon: React.ComponentProps<typeof Ionicons>["name"];
+            colorKey: "success" | "error" | "warning" | "primary";
+            date: string;
+            actor: string | null;
+            reason: string | null;
+            isCurrent: boolean;
+            sortKey: number; // timestamp for sorting
+          }
+
+          const entries: TimelineEntry[] = [];
+
+          // 1. Synthesize "Payment Confirmed" milestone for paid orders
+          if (
+            order.payment_status === "PAID" &&
+            order.payment_method !== "COD"
+          ) {
+            entries.push({
+              id: "payment-confirmed",
+              label: "Payment Confirmed",
+              icon: "checkmark-circle",
+              colorKey: "success",
+              date: order.placed_at,
+              actor: "System",
+              reason: null,
+              isCurrent: false,
+              sortKey: new Date(order.placed_at).getTime() + 1,
+            });
+          }
+
+          // 2. Add all order status history entries
+          order.status_history.forEach((entry, index) => {
+            // Skip duplicate payment-status-only entries from cadmin
+            // (where from_status === to_status and reason contains "payment_status:")
+            const isPaymentOnlyEntry =
+              entry.from_status === entry.to_status &&
+              entry.reason?.startsWith("payment_status:");
+
+            if (isPaymentOnlyEntry) {
+              // Parse the payment status change from the reason string
+              const match = entry.reason?.match(
+                /payment_status:\s*(\w+)\s*→\s*(\w+)/,
+              );
+              if (match) {
+                const newPaymentStatus = match[2];
+                const isRefund =
+                  newPaymentStatus === "REFUNDED" ||
+                  newPaymentStatus === "PARTIALLY_REFUNDED";
+                const isLatest =
+                  index === order.status_history.length - 1 &&
+                  order.status === "CANCELLED" &&
+                  isRefund;
+
+                entries.push({
+                  id: `payment-${index}`,
+                  label:
+                    newPaymentStatus === "REFUNDED"
+                      ? "Refunded"
+                      : newPaymentStatus === "PARTIALLY_REFUNDED"
+                        ? "Partially Refunded"
+                        : `Payment ${newPaymentStatus}`,
+                  icon: isRefund
+                    ? "refresh-circle"
+                    : "card-outline",
+                  colorKey: isRefund ? "success" : "warning",
+                  date: entry.created_at,
+                  actor: "Admin",
+                  reason: entry.reason
+                    ?.split("|")
+                    .slice(1)
+                    .join("|")
+                    .trim() || null,
+                  isCurrent: isLatest && isRefunded,
+                  sortKey: new Date(entry.created_at).getTime(),
+                });
+              }
+              return; // Don't add the duplicate order status entry
+            }
+
+            // Normal order status entry
+            const isLatest =
+              index === order.status_history.length - 1;
+            const isCurrentStepRefund =
+              isLatest && isRefunded && entry.to_status === "CANCELLED";
+
+            entries.push({
+              id: `status-${index}`,
+              label: isCurrentStepRefund
+                ? "Refunded"
+                : getStatusLabel(entry.to_status),
+              icon: isCurrentStepRefund
+                ? "refresh-circle"
+                : (getStatusIcon(entry.to_status) as any),
+              colorKey: isCurrentStepRefund
+                ? "success"
+                : (getStatusColorKey(entry.to_status) as any),
+              date: entry.created_at,
+              actor:
+                entry.changed_by_type === "customer"
+                  ? "You"
+                  : entry.changed_by_type === "pharmacy"
+                    ? "Pharmacy"
+                    : entry.changed_by_type === "cadmin"
+                      ? "Admin"
+                      : "System",
+              reason: entry.reason,
+              isCurrent: isLatest && !isRefunded,
+              sortKey: new Date(entry.created_at).getTime(),
+            });
+          });
+
+          // 3. Sort chronologically
+          entries.sort((a, b) => a.sortKey - b.sortKey);
+
+          // Mark the actual last entry as current
+          if (entries.length > 0) {
+            entries.forEach((e) => (e.isCurrent = false));
+            entries[entries.length - 1].isCurrent = true;
+          }
+
+          if (entries.length === 0) return null;
+
+          return (
+            <View
               style={[
-                styles.cardTitle,
-                { color: colors.text.primary, fontFamily: "Inter_700Bold" },
+                styles.card,
+                {
+                  backgroundColor: colors.background.card,
+                  borderColor: colors.border.default,
+                },
               ]}
             >
-              Order Timeline
-            </Text>
-            {order.status_history.map((entry, index) => {
-              const isLatest = index === order.status_history.length - 1;
-              const isPast = !isLatest;
-              const stepIcon = getStatusIcon(entry.to_status) as any;
-              const stepColorKey = getStatusColorKey(entry.to_status);
-              const stepColor =
-                stepColorKey === "success"
-                  ? colors.status.success
-                  : stepColorKey === "error"
-                    ? colors.status.error
-                    : stepColorKey === "warning"
-                      ? colors.status.warning
-                      : colors.brand.primary;
-              const stepBg =
-                stepColorKey === "success"
-                  ? colors.status.successBg
-                  : stepColorKey === "error"
-                    ? colors.status.errorBg
-                    : stepColorKey === "warning"
-                      ? colors.status.warningBg
-                      : colors.background.tint;
-              const elapsed = entry.created_at
-                ? getRelativeTime(entry.created_at)
-                : null;
+              <Text
+                style={[
+                  styles.cardTitle,
+                  {
+                    color: colors.text.primary,
+                    fontFamily: "Inter_700Bold",
+                  },
+                ]}
+              >
+                Order Timeline
+              </Text>
+              {entries.map((entry, index) => {
+                const isLatest = entry.isCurrent;
+                const isPast = !isLatest;
 
-              return (
-                <View key={index} style={styles.timelineRow}>
-                  <View style={styles.timelineIconCol}>
-                    <View
-                      style={[
-                        styles.timelineIconWrap,
-                        {
-                          backgroundColor: isLatest
-                            ? stepBg
-                            : colors.background.elevated,
-                          borderColor: isLatest
-                            ? stepColor
-                            : colors.border.default,
-                          borderWidth: isLatest ? 2 : 1,
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={stepIcon}
-                        size={isLatest ? 16 : 14}
-                        color={
-                          isLatest
-                            ? stepColor
-                            : isPast
-                              ? colors.text.muted
-                              : colors.text.faint
-                        }
-                      />
-                    </View>
-                    {index < order.status_history.length - 1 && (
+                const stepColor =
+                  entry.colorKey === "success"
+                    ? colors.status.success
+                    : entry.colorKey === "error"
+                      ? colors.status.error
+                      : entry.colorKey === "warning"
+                        ? colors.status.warning
+                        : colors.brand.primary;
+                const stepBg =
+                  entry.colorKey === "success"
+                    ? colors.status.successBg
+                    : entry.colorKey === "error"
+                      ? colors.status.errorBg
+                      : entry.colorKey === "warning"
+                        ? colors.status.warningBg
+                        : colors.background.tint;
+                const elapsed = getRelativeTime(entry.date);
+
+                return (
+                  <View key={entry.id} style={styles.timelineRow}>
+                    <View style={styles.timelineIconCol}>
                       <View
                         style={[
-                          styles.timelineConnector,
+                          styles.timelineIconWrap,
                           {
-                            backgroundColor: isPast
-                              ? colors.border.default
-                              : colors.border.subtle,
-                          },
-                        ]}
-                      />
-                    )}
-                  </View>
-                  <View
-                    style={[
-                      styles.timelineContent,
-                      index < order.status_history.length - 1 &&
-                        styles.timelineContentSpaced,
-                    ]}
-                  >
-                    <View style={styles.timelineTextRow}>
-                      <Text
-                        style={[
-                          styles.timelineStatus,
-                          {
-                            color: isLatest ? stepColor : colors.text.primary,
-                            fontFamily: isLatest
-                              ? "Inter_700Bold"
-                              : "Inter_600SemiBold",
+                            backgroundColor: isLatest
+                              ? stepBg
+                              : colors.background.elevated,
+                            borderColor: isLatest
+                              ? stepColor
+                              : colors.border.default,
+                            borderWidth: isLatest ? 2 : 1,
                           },
                         ]}
                       >
-                        {getStatusLabel(entry.to_status)}
-                      </Text>
-                      {isLatest && (
+                        <Ionicons
+                          name={entry.icon}
+                          size={isLatest ? 16 : 14}
+                          color={
+                            isLatest
+                              ? stepColor
+                              : isPast
+                                ? colors.text.muted
+                                : colors.text.faint
+                          }
+                        />
+                      </View>
+                      {index < entries.length - 1 && (
                         <View
                           style={[
-                            styles.timelineLatestBadge,
-                            { backgroundColor: stepBg },
+                            styles.timelineConnector,
+                            {
+                              backgroundColor: isPast
+                                ? colors.border.default
+                                : colors.border.subtle,
+                            },
                           ]}
-                        >
-                          <Text
-                            style={[
-                              styles.timelineLatestText,
-                              {
-                                color: stepColor,
-                                fontFamily: "Inter_600SemiBold",
-                              },
-                            ]}
-                          >
-                            Current
-                          </Text>
-                        </View>
+                        />
                       )}
                     </View>
-                    <Text
+                    <View
                       style={[
-                        styles.timelineDate,
-                        {
-                          color: colors.text.faint,
-                          fontFamily: "Inter_400Regular",
-                        },
+                        styles.timelineContent,
+                        index < entries.length - 1 &&
+                          styles.timelineContentSpaced,
                       ]}
                     >
-                      {formatDeliveryDate(entry.created_at)}
-                      {elapsed ? `  ·  ${elapsed}` : ""}
-                    </Text>
-                    {entry.changed_by_type && (
-                      <View style={styles.timelineByRow}>
-                        <Ionicons
-                          name={
-                            entry.changed_by_type === "customer"
-                              ? "person-outline"
-                              : entry.changed_by_type === "pharmacy"
-                                ? "storefront-outline"
-                                : "settings-outline"
-                          }
-                          size={11}
-                          color={colors.text.faint}
-                        />
+                      <View style={styles.timelineTextRow}>
                         <Text
                           style={[
-                            styles.timelineBy,
+                            styles.timelineStatus,
                             {
-                              color: colors.text.faint,
-                              fontFamily: "Inter_400Regular",
+                              color: isLatest
+                                ? stepColor
+                                : colors.text.primary,
+                              fontFamily: isLatest
+                                ? "Inter_700Bold"
+                                : "Inter_600SemiBold",
                             },
                           ]}
                         >
-                          {entry.changed_by_type === "customer"
-                            ? "You"
-                            : entry.changed_by_type === "pharmacy"
-                              ? "Pharmacy"
-                              : "System"}
+                          {entry.label}
                         </Text>
+                        {isLatest && (
+                          <View
+                            style={[
+                              styles.timelineLatestBadge,
+                              { backgroundColor: stepBg },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.timelineLatestText,
+                                {
+                                  color: stepColor,
+                                  fontFamily: "Inter_600SemiBold",
+                                },
+                              ]}
+                            >
+                              Current
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                    )}
-                    {entry.reason && (
                       <Text
                         style={[
-                          styles.timelineReason,
+                          styles.timelineDate,
                           {
-                            color: colors.text.muted,
+                            color: colors.text.faint,
                             fontFamily: "Inter_400Regular",
                           },
                         ]}
-                        numberOfLines={2}
                       >
-                        {entry.reason}
+                        {formatDeliveryDate(entry.date)}
+                        {elapsed ? `  ·  ${elapsed}` : ""}
                       </Text>
-                    )}
+                      {entry.actor && (
+                        <View style={styles.timelineByRow}>
+                          <Ionicons
+                            name={
+                              entry.actor === "You"
+                                ? "person-outline"
+                                : entry.actor === "Pharmacy"
+                                  ? "storefront-outline"
+                                  : entry.actor === "Admin"
+                                    ? "shield-checkmark-outline"
+                                    : "settings-outline"
+                            }
+                            size={11}
+                            color={colors.text.faint}
+                          />
+                          <Text
+                            style={[
+                              styles.timelineBy,
+                              {
+                                color: colors.text.faint,
+                                fontFamily: "Inter_400Regular",
+                              },
+                            ]}
+                          >
+                            {entry.actor}
+                          </Text>
+                        </View>
+                      )}
+                      {entry.reason && (
+                        <Text
+                          style={[
+                            styles.timelineReason,
+                            {
+                              color: colors.text.muted,
+                              fontFamily: "Inter_400Regular",
+                            },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {entry.reason}
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
+                );
+              })}
+            </View>
+          );
+        })()}
 
         <View style={styles.bottomPad} />
       </ScrollView>
 
-      {/* ── Sticky Bottom Bar ─────────────────────────────────────────────── */}
+      {/* Sticky Bottom Bar */}
       <View
         style={[
           styles.stickyBar,
@@ -1134,7 +1313,6 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
           },
         ]}
       >
-        {/* ── Download Invoice button — READY_FOR_PICKUP and COMPLETED ── */}
         {showInvoiceButton && (
           <TouchableOpacity
             style={[
@@ -1194,7 +1372,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
               You can only cancel before the pharmacy accepts
             </Text>
           </>
-        ) : order.status === "COMPLETED" ? (
+        ) : order.status === "COMPLETED" || isRefunded ? (
           <>
             <TouchableOpacity
               style={[
@@ -1223,7 +1401,6 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
               </Text>
             </TouchableOpacity>
 
-            {/* ── Support Ticket Button ── */}
             <TouchableOpacity
               style={[
                 styles.invoiceButton,
@@ -1358,6 +1535,8 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 14, lineHeight: 20 },
   itemBrand: { fontSize: 12 },
   itemQty: { fontSize: 12 },
+  priceContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
+  originalMrp: { fontSize: 12, textDecorationLine: "line-through" },
   itemPrice: { fontSize: 15, flexShrink: 0 },
   prescriptionList: { gap: 8 },
   prescriptionRow: {
@@ -1434,8 +1613,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 6,
   },
-
-  // ── Invoice download button ──────────────────────────────────────────
   invoiceButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1447,7 +1624,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   invoiceButtonText: { fontSize: 14 },
-
   actionButton: {
     flexDirection: "row",
     alignItems: "center",

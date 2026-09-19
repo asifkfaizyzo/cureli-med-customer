@@ -18,7 +18,12 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withRepeat,
+  withTiming,
+  withSequence,
+  cancelAnimation,
   interpolate,
+  Easing,
 }                                from 'react-native-reanimated';
 import { useEffect, useState }   from 'react';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -92,17 +97,108 @@ function NotchBackground({
   );
 }
 
+// ── Pulsing / Flashing Badge Dot ──────────────────────────────────────────────
+
+interface PulsingBadgeDotProps {
+  badgeColor:  string;
+  dockBgColor: string;
+  isPulsing?:  boolean;
+}
+
+function PulsingBadgeDot({
+  badgeColor,
+  dockBgColor,
+  isPulsing = false,
+}: PulsingBadgeDotProps) {
+  const pulseScale  = useSharedValue(1);
+  const ringScale   = useSharedValue(1);
+  const ringOpacity = useSharedValue(0.7);
+
+  useEffect(() => {
+    if (isPulsing) {
+      // 1. Subtle breathing/pulsing core dot
+      pulseScale.value = withRepeat(
+        withSequence(
+          withTiming(1.2, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.9, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+        true,
+      );
+
+      // 2. Outward radar ping/sonar wave effect
+      ringScale.value = withRepeat(
+        withTiming(2.4, { duration: 1200, easing: Easing.out(Easing.quad) }),
+        -1,
+        false,
+      );
+      ringOpacity.value = withRepeat(
+        withTiming(0, { duration: 1200, easing: Easing.out(Easing.quad) }),
+        -1,
+        false,
+      );
+    } else {
+      pulseScale.value = 1;
+      ringScale.value = 1;
+      ringOpacity.value = 0;
+    }
+
+    return () => {
+      cancelAnimation(pulseScale);
+      cancelAnimation(ringScale);
+      cancelAnimation(ringOpacity);
+    };
+  }, [isPulsing, pulseScale, ringScale, ringOpacity]);
+
+  const dotAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+  }));
+
+  const ringAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ringScale.value }],
+    opacity: ringOpacity.value,
+  }));
+
+  return (
+    <View style={styles.badgeWrapper} pointerEvents="none">
+      {/* Outer radar ping ring */}
+      {isPulsing && (
+        <Animated.View
+          style={[
+            styles.badgePingRing,
+            { backgroundColor: badgeColor },
+            ringAnimStyle,
+          ]}
+        />
+      )}
+
+      {/* Center solid badge dot */}
+      <Animated.View
+        style={[
+          styles.badgeDot,
+          {
+            backgroundColor: badgeColor,
+            borderColor: dockBgColor,
+          },
+          dotAnimStyle,
+        ]}
+      />
+    </View>
+  );
+}
+
 // ── Tab Item ──────────────────────────────────────────────────────────────────
 
 interface TabItemProps {
-  routeName:     string;
-  label:         string;
-  isFocused:     boolean;
-  onPress:       () => void;
-  activeColor:   string;
-  inactiveColor: string;
-  badgeColor?:   string;
-  dockBgColor:   string;
+  routeName:      string;
+  label:          string;
+  isFocused:      boolean;
+  onPress:        () => void;
+  activeColor:    string;
+  inactiveColor:  string;
+  badgeColor?:    string;
+  isPulsingBadge?: boolean;
+  dockBgColor:    string;
 }
 
 function TabItem({
@@ -113,6 +209,7 @@ function TabItem({
   activeColor,
   inactiveColor,
   badgeColor,
+  isPulsingBadge,
   dockBgColor,
 }: TabItemProps) {
   const progress = useSharedValue(isFocused ? 1 : 0);
@@ -199,14 +296,10 @@ function TabItem({
         </Animated.View>
 
         {badgeColor !== undefined && (
-          <View
-            style={[
-              styles.badgeDot,
-              {
-                backgroundColor: badgeColor,
-                borderColor:     dockBgColor,
-              },
-            ]}
+          <PulsingBadgeDot
+            badgeColor={badgeColor}
+            dockBgColor={dockBgColor}
+            isPulsing={isPulsingBadge}
           />
         )}
       </View>
@@ -391,6 +484,7 @@ function FloatingNotchTabBar({
             activeColor={colors.tab.itemactive}
             inactiveColor={colors.text.secondary}
             badgeColor={ordersBadgeColor}
+            isPulsingBadge={hasActiveOrders}
             dockBgColor={dockBg}
           />
 
@@ -501,13 +595,25 @@ const styles = StyleSheet.create({
     alignItems:     'center',
     justifyContent: 'center',
   },
-  badgeDot: {
+  badgeWrapper: {
+    position: 'absolute',
+    top:      -2,
+    right:    -4,
+    width:    12,
+    height:   12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgePingRing: {
     position:     'absolute',
-    top:          -3,
-    right:        -3,
-    width:        8,
-    height:       8,
-    borderRadius: 4,
+    width:        10,
+    height:       10,
+    borderRadius: 5,
+  },
+  badgeDot: {
+    width:        10,
+    height:       10,
+    borderRadius: 5,
     borderWidth:  1.5,
   },
   tabLabel: {

@@ -40,14 +40,32 @@ interface PrescriptionRequestBannerProps {
 }
 
 function PrescriptionRequestBanner({ text }: PrescriptionRequestBannerProps) {
+  const { colors } = useTheme();
+
   return (
     <TouchableOpacity
       onPress={() => router.push("/prescription-request" as any)}
       activeOpacity={0.85}
-      style={styles.prescriptionPill}
+      style={[
+        styles.prescriptionPill,
+        {
+          backgroundColor: colors.brand.primary,
+        },
+      ]}
     >
-      <Text style={styles.prescriptionPillText}>{text}</Text>
-      <Ionicons name="cloud-upload-outline" size={16} color="#ffffff" />
+      <Text
+        style={[
+          styles.prescriptionPillText,
+          { color: colors.brand.primaryText },
+        ]}
+      >
+        {text}
+      </Text>
+      <Ionicons
+        name="cloud-upload-outline"
+        size={16}
+        color={colors.brand.primaryText}
+      />
     </TouchableOpacity>
   );
 }
@@ -103,7 +121,11 @@ function FullScreenError({ onRetry }: FullScreenErrorProps) {
         activeOpacity={0.8}
         style={[styles.retryButton, { backgroundColor: colors.brand.primary }]}
       >
-        <Text style={styles.retryButtonText}>Try Again</Text>
+        <Text
+          style={[styles.retryButtonText, { color: colors.brand.primaryText }]}
+        >
+          Try Again
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -338,15 +360,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#16044d",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
     marginVertical: Spacing.sm,
   },
   prescriptionPillText: {
-    color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -362,7 +382,7 @@ const styles = StyleSheet.create({
   errorIconWrap: {
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: Radius.full,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.sm,
@@ -384,7 +404,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
   },
   retryButtonText: {
-    color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
   },

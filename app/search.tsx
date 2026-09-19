@@ -1,28 +1,6 @@
 // app/search.tsx
 //
 // Unified search screen with Medicines / Shops toggle.
-//
-// PHASE 4 CHANGE: complete rebuild.
-//
-// Previous design:
-//   - Two modes (medicines / shops) with a toggle
-//   - Shop side used DUMMY_SHOPS local array
-//   - Mode toggle was labeled "Search in" with pills
-//
-// New design:
-//   - Two tabs: Medicines | Shops
-//   - Medicines tab: real catalog search (unchanged backend)
-//   - Shops tab: real shop search via GET /mobile/shops/search
-//   - Both tabs share the same search input and debounce logic
-//   - dummyShops.ts is gone
-//   - Location: not yet integrated (expo-location future phase)
-//     Shops ordered by listing count until location is added
-//
-// Medicine results render MedicineCard (unchanged).
-// Shop results render ShopCard (updated to real ShopSearchResult type).
-//
-// Cart conflict handling lives in Phase 5 (shop profile screen).
-// The ADD button on ProductCard now navigates to detail page (Phase 4).
 
 import React, {
   useState,
@@ -36,13 +14,13 @@ import {
   Text,
   TextInput,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
   type ListRenderItem,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-// ── CHANGED: added useLocalSearchParams to this import ────────
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -56,6 +34,7 @@ import { ShopCard } from "../src/features/marketplace/components/ShopCard";
 import { marketplaceApi } from "../src/features/marketplace/api/marketplace.api";
 import { generateMarketplaceData } from "../src/features/marketplace/utils/generateMarketplaceData";
 import { useShopSearch } from "../src/features/marketplace/hooks/useShopSearch";
+import { useKeyboardHeight } from "../src/hooks/useKeyboardHeight";
 import type { EnrichedMedicine } from "../src/types/medicine";
 import type { ShopSearchResult } from "../src/types/shop";
 
@@ -193,6 +172,7 @@ function TabToggle({ activeTab, onChange }: TabToggleProps) {
 
 export default function SearchScreen() {
   const { colors } = useTheme();
+  const { keyboardHeight } = useKeyboardHeight();
 
   // ── State declarations ────────────────────────────────────
   const [inputValue, setInputValue] = useState("");
@@ -200,16 +180,8 @@ export default function SearchScreen() {
   const debouncedQuery = useDebounce(inputValue, 400);
   const inputRef = useRef<TextInput>(null);
 
-  // ── Read initial params from navigation ───────────────────
-  // Passed by product detail screen "Find Pharmacies" button:
-  //   tab: "shops" | "medicines"
-  //   q: pre-filled search query (medicine name)
-  // Both are optional — direct navigation to /search has no params.
   const params = useLocalSearchParams<{ tab?: string; q?: string }>();
 
-  // Apply params once on mount only.
-  // useEffect with empty deps — intentional, params are initial values only.
-  // If user navigates back and forward, we do not re-apply.
   useEffect(() => {
     if (params.tab === "shops" || params.tab === "medicines") {
       setActiveTab(params.tab);
@@ -237,8 +209,6 @@ export default function SearchScreen() {
   } = useMedicineResults(debouncedQuery, activeTab === "medicines");
 
   // ── Shops tab data ────────────────────────────────────────
-  // Location is null for now — Phase 6 will add expo-location.
-  // Shops are ordered by listing count when no location is provided.
   const {
     shops,
     isLoading: isShopsLoading,
@@ -248,13 +218,10 @@ export default function SearchScreen() {
     q: debouncedQuery,
     location: null,
     limit: 20,
-    // Shops tab always fetches — even without a query — so the idle
-    // state shows real shops instead of a blank screen.
     enabled: activeTab === "shops",
   });
 
   // ── Derived state ─────────────────────────────────────────
-
   const isMedicineTab = activeTab === "medicines";
   const isShopTab = activeTab === "shops";
 
@@ -269,16 +236,10 @@ export default function SearchScreen() {
   const resultLabel =
     resultCount === 1 ? config.resultLabel : `${config.resultLabel}s`;
 
-  // For the shops tab, show results even without a query (idle browse).
-  // For the medicines tab, only show results when query >= 2 chars.
   const shouldShowResults = isShopTab ? hasShopResults : hasMedicineResults;
-
-  // Show the idle state only for medicines when no query entered.
-  // For shops, the idle state is replaced by the full shop list.
   const showIdle = isMedicineTab && !hasQuery;
 
   // ── Handlers ──────────────────────────────────────────────
-
   const handleClear = useCallback(() => {
     setInputValue("");
     inputRef.current?.focus();
@@ -286,9 +247,6 @@ export default function SearchScreen() {
 
   const handleTabChange = useCallback((tab: SearchTab) => {
     setActiveTab(tab);
-    // Do not clear the search input — user's query applies to both tabs.
-    // They may be searching "Apollo" and want to see both medicine and
-    // shop results.
   }, []);
 
   const handlePressMedicine = useCallback((medicine: EnrichedMedicine) => {
@@ -303,17 +261,12 @@ export default function SearchScreen() {
     setInputValue(term);
   }, []);
 
-  const handleCameraPress = useCallback(() => {
-    router.push("/prescription/upload" as any);
-  }, []);
-
   const handleRetry = useCallback(() => {
     if (isMedicineTab) refetchMedicines();
     else refetchShops();
   }, [isMedicineTab, refetchMedicines, refetchShops]);
 
   // ── FlatList renderers ────────────────────────────────────
-
   const renderMedicine = useCallback<ListRenderItem<EnrichedMedicine>>(
     ({ item }) => (
       <MedicineCard medicine={item} onPress={handlePressMedicine} />
@@ -337,7 +290,6 @@ export default function SearchScreen() {
   );
 
   // ── Results header text ───────────────────────────────────
-
   const resultsHeaderText = useMemo(() => {
     if (isShopTab && !hasQuery) {
       return `${resultCount} ${resultLabel} near you`;
@@ -345,8 +297,16 @@ export default function SearchScreen() {
     return `${resultCount} ${resultLabel} for "${debouncedQuery}"`;
   }, [isShopTab, hasQuery, resultCount, resultLabel, debouncedQuery]);
 
-  // ── Render ────────────────────────────────────────────────
+  // Dynamic padding so the list item touches the top of the keyboard
+  const dynamicListContentStyle = useMemo(
+    () => [
+      styles.listContent,
+      { paddingBottom: Math.max(Spacing["3xl"], keyboardHeight + Spacing.base) },
+    ],
+    [keyboardHeight],
+  );
 
+  // ── Render ────────────────────────────────────────────────
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background.page }]}
@@ -422,7 +382,16 @@ export default function SearchScreen() {
 
       {/* ── IDLE state (medicines tab only, no query) ── */}
       {showIdle && (
-        <View style={styles.idleContainer}>
+        <ScrollView
+          style={styles.idleScroll}
+          contentContainerStyle={[
+            styles.idleContainer,
+            { paddingBottom: Math.max(Spacing["3xl"], keyboardHeight + Spacing.base) },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={true}
+        >
           <Text style={[styles.idleTitle, { color: colors.text.secondary }]}>
             {config.idleTitle}
           </Text>
@@ -448,14 +417,17 @@ export default function SearchScreen() {
                   color={colors.text.brand}
                 />
                 <Text
-                  style={[styles.suggestionText, { color: colors.text.brand }]}
+                  style={[
+                    styles.suggestionText,
+                    { color: colors.text.brand },
+                  ]}
                 >
                   {term}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </ScrollView>
       )}
 
       {/* ── LOADING ── */}
@@ -507,7 +479,7 @@ export default function SearchScreen() {
 
       {/* ── RESULTS ── */}
       {!showIdle && !isLoading && !isError && shouldShowResults && (
-        <>
+        <View style={styles.resultsContainer}>
           {/* Results count header */}
           <View style={styles.resultsHeader}>
             <Text style={[styles.resultsCount, { color: colors.text.muted }]}>
@@ -518,12 +490,14 @@ export default function SearchScreen() {
           {/* Medicine results */}
           {isMedicineTab && (
             <FlatList
+              style={styles.list}
               data={medicines}
               renderItem={renderMedicine}
               keyExtractor={medicineKeyExtractor}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.listContent}
+              automaticallyAdjustKeyboardInsets={true}
+              contentContainerStyle={dynamicListContentStyle}
               initialNumToRender={8}
               maxToRenderPerBatch={8}
               windowSize={11}
@@ -534,19 +508,21 @@ export default function SearchScreen() {
           {/* Shop results */}
           {isShopTab && (
             <FlatList
+              style={styles.list}
               data={shops}
               renderItem={renderShop}
               keyExtractor={shopKeyExtractor}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.listContent}
+              automaticallyAdjustKeyboardInsets={true}
+              contentContainerStyle={dynamicListContentStyle}
               initialNumToRender={8}
               maxToRenderPerBatch={8}
               windowSize={11}
               removeClippedSubviews
             />
           )}
-        </>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -615,10 +591,13 @@ const styles = StyleSheet.create({
     ...Typography.smallMedium,
   },
   // ── Idle ──────────────────────────────────────────────────
-  idleContainer: {
+  idleScroll: {
     flex: 1,
+  },
+  idleContainer: {
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.xl,
+    paddingBottom: Spacing["3xl"],
     gap: Spacing.md,
   },
   idleTitle: {
@@ -663,12 +642,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   // ── Results ───────────────────────────────────────────────
+  resultsContainer: {
+    flex: 1,
+  },
   resultsHeader: {
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md,
   },
   resultsCount: {
     ...Typography.small,
+  },
+  list: {
+    flex: 1,
   },
   listContent: {
     paddingBottom: Spacing["3xl"],

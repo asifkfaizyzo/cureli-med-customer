@@ -1,8 +1,4 @@
 // cureli-mobile/app/_layout.tsx
-import { useEffect } from "react";
-import { Stack } from "expo-router";
-import { router } from "expo-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -10,20 +6,23 @@ import {
   Inter_700Bold,
   Inter_800ExtraBold,
 } from "@expo-google-fonts/inter";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
+import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { useEffect } from "react";
 import { LogBox } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { GlobalOrderBar } from "../src/components/OrderBar/GlobalOrderBar";
 
-import { useAuthStore } from "../src/store/authStore";
-import { api, authEventEmitter } from "../src/services/api";
-import { ThemeProvider } from "../src/theme/ThemeContext";
-import { DialogProvider } from "../src/components/Dialog/DialogProvider";
 import { GlobalCartBar } from "../src/components/CartBar/GlobalCartBar";
-import { useMobileSSE } from "../src/hooks/useMobileSSE";
+import { DialogProvider } from "../src/components/Dialog/DialogProvider";
 import { PushManager } from "../src/components/PushManager/PushManager";
-import { DevThemeToggle } from "../src/components/DevThemeToggle/DevThemeToggle";
+import { useMobileSSE } from "../src/hooks/useMobileSSE";
+import { api, authEventEmitter } from "../src/services/api";
+import { useAuthStore } from "../src/store/authStore";
+import { ThemeProvider } from "../src/theme/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -217,11 +216,11 @@ export default function RootLayout() {
                   name="(auth)/register"
                   options={{ headerShown: false }}
                 />
-<Stack.Screen
+                <Stack.Screen
                   name="(auth)/forgot-password"
                   options={{ headerShown: false }}
                 />
-<Stack.Screen
+                <Stack.Screen
                   name="(auth)/new-password"
                   options={{ headerShown: false }}
                 />
@@ -249,6 +248,7 @@ export default function RootLayout() {
               </Stack>
 
               <GlobalCartBar />
+              {/* <GlobalOrderBar /> */}
             </DialogProvider>
           </BottomSheetModalProvider>
         </QueryClientProvider>

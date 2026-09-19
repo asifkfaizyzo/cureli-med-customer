@@ -21,7 +21,7 @@ export interface MedicineRowProps {
   cartQuantity: number;
   colors: ReturnType<typeof useTheme>["colors"];
   isDark: boolean;
-  isBranchClosed?: boolean; // ◄◄ Explicitly declared optional prop
+  isBranchClosed?: boolean;
 }
 
 export function MedicineRow({
@@ -96,21 +96,6 @@ export function MedicineRow({
           <Text style={[styles.price, { color: colors.text.primary }]}>
             ₹{item.listingPrice ?? item.marketplace.startsAt}
           </Text>
-          {/* {item.requiresPrescription ? (
-            <View
-              style={[
-                styles.rxBadge,
-                {
-                  backgroundColor: colors.status.warningBg,
-                  borderColor: colors.status.warning,
-                },
-              ]}
-            >
-              <Text style={[styles.rxText, { color: colors.status.warning }]}>
-                Rx
-              </Text>
-            </View>
-          ) : null} */}
         </View>
       </View>
 
@@ -131,7 +116,13 @@ export function MedicineRow({
           </View>
         ) : inCart ? (
           <View
-            style={[styles.stepper, { borderColor: colors.brand.primary }]}
+            style={[
+              styles.stepper,
+              {
+                borderColor: colors.brand.primary,
+                backgroundColor: colors.background.card,
+              },
+            ]}
           >
             <TouchableOpacity
               onPress={handleDecrement}
@@ -142,13 +133,19 @@ export function MedicineRow({
               ]}
               hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
             >
-              <Ionicons name="remove" size={14} color="#FFFFFF" />
+              <Ionicons
+                name="remove"
+                size={14}
+                color={colors.brand.primaryText}
+              />
             </TouchableOpacity>
+
             <Text
               style={[styles.stepperCount, { color: colors.brand.primary }]}
             >
               {cartQuantity}
             </Text>
+
             <TouchableOpacity
               onPress={handleIncrement}
               activeOpacity={0.7}
@@ -158,14 +155,24 @@ export function MedicineRow({
               ]}
               hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
             >
-              <Ionicons name="add" size={14} color="#FFFFFF" />
+              <Ionicons
+                name="add"
+                size={14}
+                color={colors.brand.primaryText}
+              />
             </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity
             onPress={handleAdd}
             activeOpacity={0.8}
-            style={[styles.addBtn, { borderColor: colors.brand.primary }]}
+            style={[
+              styles.addBtn,
+              {
+                borderColor: colors.brand.primary,
+                backgroundColor: colors.background.card, // ✅ Dynamic theme card background
+              },
+            ]}
           >
             <Text style={[styles.addBtnText, { color: colors.brand.primary }]}>
               ADD
@@ -217,17 +224,6 @@ const styles = StyleSheet.create({
   price: {
     ...Typography.bodySemiBold,
   },
-  rxBadge: {
-    borderWidth: 1,
-    borderRadius: Radius.xs,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  rxText: {
-    ...Typography.caption,
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-  },
   rightCol: {
     justifyContent: "center",
     alignItems: "flex-end",
@@ -238,7 +234,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: Radius.sm,
     borderWidth: 1.5,
-    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
     minWidth: 64,

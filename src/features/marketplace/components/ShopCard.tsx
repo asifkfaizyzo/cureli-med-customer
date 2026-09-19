@@ -170,7 +170,7 @@ function ShopCardComponent({ shop, onPress }: ShopCardProps) {
           </View>
         ) : null}
 
-        <View style={styles.metaItem}>
+        {/* <View style={styles.metaItem}>
           <Ionicons
             name="star"
             size={13}
@@ -186,7 +186,7 @@ function ShopCardComponent({ shop, onPress }: ShopCardProps) {
           >
             {shop.rating != null ? shop.rating.toFixed(1) : "No rating yet"}
           </Text>
-        </View>
+        </View> */}
 
         <TouchableOpacity
           onPress={() => onPress(shop)}

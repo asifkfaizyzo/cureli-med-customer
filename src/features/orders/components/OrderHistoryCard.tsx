@@ -59,11 +59,6 @@ function ItemRow({
         },
       ]}
     >
-      {/*
-        Medicine thumbnail.
-        mode="medicine" → branded placeholder bottle image.
-        Transparent PNG edges show background.elevated, not the placeholder.
-      */}
       <RemoteImage
         uri={item.image_url ?? null}
         style={[
@@ -130,10 +125,17 @@ export function OrderHistoryCard({
   const { colors, isDark } = useTheme();
   const brandColor = isDark ? colors.brand.accent : colors.brand.primary;
 
-  const colorKey = getStatusColorKey(order.status);
+  // ── Refund Status Override logic safely typed ───────────────────────────
+  const isRefunded =
+    order.status === "CANCELLED" && order.payment_status === "REFUNDED";
+
+  const colorKey = isRefunded ? "success" : getStatusColorKey(order.status);
   const { fg, bg } = resolveStatusColors(colorKey, colors);
-  const iconName = getStatusIcon(order.status) as any;
-  const statusLabel = getStatusLabel(order.status);
+  const iconName = (
+    isRefunded ? "refresh-circle-outline" : getStatusIcon(order.status)
+  ) as any;
+  const statusLabel = isRefunded ? "Refunded" : getStatusLabel(order.status);
+  // ────────────────────────────────────────────────────────────────────────
 
   const visibleItems = order.items.slice(0, MAX_VISIBLE_ITEMS);
   const hiddenCount = order.items.length - visibleItems.length;
@@ -283,7 +285,7 @@ export function OrderHistoryCard({
           </Text>
         ) : null}
 
-        {order.status === "COMPLETED" ? (
+        {order.status === "COMPLETED" || isRefunded ? (
           <TouchableOpacity
             style={styles.reorderBtn}
             onPress={onReorder}
@@ -345,7 +347,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 10,
   },
-  // RemoteImage receives this as its style prop — controls size/shape
   itemThumb: {
     width: 44,
     height: 44,

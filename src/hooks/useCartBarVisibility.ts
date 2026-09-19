@@ -1,3 +1,4 @@
+//src\hooks\useCartBarVisibility.ts
 import { useMemo } from "react";
 import { usePathname } from "expo-router";
 

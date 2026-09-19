@@ -50,7 +50,7 @@ export function ShopIdentity({ profile, colors }: ShopIdentityProps) {
         />
 
         {/* Rating pill */}
-        <View style={styles.ratingPill}>
+        {/* <View style={styles.ratingPill}>
           <Ionicons
             name="star"
             size={12}
@@ -61,7 +61,7 @@ export function ShopIdentity({ profile, colors }: ShopIdentityProps) {
               ? profile.rating.toFixed(1)
               : "No rating yet"}
           </Text>
-        </View>
+        </View> */}
 
         {/* Shop name */}
         <View style={styles.nameOverlay}>
