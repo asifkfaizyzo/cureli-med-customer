@@ -1,4 +1,4 @@
-// app.config.js
+//app.config.js
 import "dotenv/config";
 
 export default {
@@ -6,7 +6,7 @@ export default {
     owner: "your-zeros-and-ones",
     name: "Cureli",
     slug: "cureli-mobile",
-    version: "2.2.1",
+    version: "2.2.2",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "curelimobile",
@@ -15,7 +15,7 @@ export default {
     ios: {
       supportsTablet: false,
       bundleIdentifier: "com.cureli.mobile",
-      buildNumber: "4",          
+      buildNumber: "5",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSLocationWhenInUseUsageDescription:
@@ -36,7 +36,7 @@ export default {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: "com.cureli.mobile",
-      versionCode: 17,
+      versionCode: 18,
       googleServicesFile:
         process.env.GOOGLE_SERVICES_JSON || "./google-services.json",
       permissions: [
@@ -85,7 +85,6 @@ export default {
           sounds: [],
         },
       ],
-      // ── Pin AGP version for EAS build compatibility ───────────
       [
         "expo-build-properties",
         {
