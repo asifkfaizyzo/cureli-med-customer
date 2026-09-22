@@ -57,10 +57,6 @@ export function OnboardingEmailScreen() {
     );
   }
 
-  function handleSkip() {
-    finishOnboarding();
-  }
-
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background.page }]}
@@ -108,16 +104,15 @@ export function OnboardingEmailScreen() {
               Stay in the loop
             </Text>
             <Text style={[styles.subtitle, { color: colors.text.muted }]}>
-              Get order confirmations and health tips straight to your inbox.
-              Totally optional.
+              We'll send order confirmations, invoices, and health tips to your
+              inbox. This is required to complete your account setup.
             </Text>
           </View>
 
           {/* Input */}
           <View style={styles.inputBlock}>
             <Text style={[styles.inputLabel, { color: colors.text.secondary }]}>
-              Email address{" "}
-              <Text style={{ color: colors.text.faint }}>(optional)</Text>
+              Email address
             </Text>
             <TextInput
               style={[
@@ -175,18 +170,6 @@ export function OnboardingEmailScreen() {
                 <MaterialIcons name="arrow-forward" size={18} color="#ffffff" />
               </>
             )}
-          </TouchableOpacity>
-
-          {/* Skip link */}
-          <TouchableOpacity
-            onPress={handleSkip}
-            style={styles.skipLink}
-            disabled={isPending}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.skipText, { color: colors.text.faint }]}>
-              I'll add this later from my profile
-            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -270,14 +253,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_700Bold",
     color: "#ffffff",
-  },
-  skipLink: {
-    alignItems: "center",
-    paddingVertical: 4,
-  },
-  skipText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    textDecorationLine: "underline",
   },
 });
