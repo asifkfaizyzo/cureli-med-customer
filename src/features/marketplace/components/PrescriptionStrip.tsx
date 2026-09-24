@@ -1,3 +1,4 @@
+// src/features/marketplace/components/PrescriptionStrip.tsx (do not remove this comment)
 // src/features/marketplace/components/PrescriptionStrip.tsx
 //
 // Sticky promotional strip below the hero carousel.

@@ -1,3 +1,4 @@
+// src/store/tabBadgeStore.ts (do not remove this comment)
 // src/store/tabBadgeStore.ts
 //
 // Lightweight store for the Orders tab badge indicators.

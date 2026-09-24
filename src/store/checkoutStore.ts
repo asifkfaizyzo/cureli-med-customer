@@ -1,3 +1,4 @@
+// src/store/checkoutStore.ts (do not remove this comment)
 // src/store/checkoutStore.ts
 
 import { create } from 'zustand';

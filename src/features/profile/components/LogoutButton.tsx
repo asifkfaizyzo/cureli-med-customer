@@ -1,3 +1,4 @@
+// src/features/profile/components/LogoutButton.tsx (do not remove this comment)
 // src/features/profile/components/LogoutButton.tsx
 
 import React, { useState } from 'react';

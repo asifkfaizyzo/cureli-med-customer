@@ -1,3 +1,4 @@
+// src/features/marketplace/components/StripBanner.tsx (do not remove this comment)
 // src/features/marketplace/components/StripBanner.tsx
 
 import React, { useCallback } from "react";

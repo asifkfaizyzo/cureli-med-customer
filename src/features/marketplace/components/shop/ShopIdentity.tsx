@@ -1,3 +1,4 @@
+// src/features/marketplace/components/shop/ShopIdentity.tsx (do not remove this comment)
 // src/features/marketplace/components/shop/ShopIdentity.tsx
 
 import React from "react";

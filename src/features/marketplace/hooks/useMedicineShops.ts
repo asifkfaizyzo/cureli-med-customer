@@ -1,3 +1,4 @@
+// src/features/marketplace/hooks/useMedicineShops.ts (do not remove this comment)
 // src/features/marketplace/hooks/useMedicineShops.ts
 //
 // Fetches branches stocking a specific medicine variant.

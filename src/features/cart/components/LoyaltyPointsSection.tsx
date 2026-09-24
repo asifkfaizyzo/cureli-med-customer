@@ -1,3 +1,4 @@
+// src/features/cart/components/LoyaltyPointsSection.tsx (do not remove this comment)
 // cureli-mobile/src/features/cart/components/LoyaltyPointsSection.tsx
 
 import React, { useEffect, useState } from "react";

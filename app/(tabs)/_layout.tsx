@@ -1,3 +1,4 @@
+// app/(tabs)/_layout.tsx (do not remove this comment)
 // app/(tabs)/_layout.tsx — True Floating Notch Dock
 //
 // Center FAB is now a Cart button with item-count badge.

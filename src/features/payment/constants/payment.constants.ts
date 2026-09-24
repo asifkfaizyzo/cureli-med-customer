@@ -1,3 +1,4 @@
+// src/features/payment/constants/payment.constants.ts (do not remove this comment)
 // src/features/payment/constants/payment.constants.ts
 
 export interface PaymentMethodItem {

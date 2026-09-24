@@ -1,3 +1,4 @@
+// src/features/marketplace/components/PromoCard.tsx (do not remove this comment)
 // src/features/marketplace/components/PromoCard.tsx
 
 import React, { useCallback } from "react";

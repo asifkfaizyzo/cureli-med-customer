@@ -1,3 +1,4 @@
+// app/checkout/_layout.tsx (do not remove this comment)
 // app/checkout/_layout.tsx
 
 import { Stack } from 'expo-router';

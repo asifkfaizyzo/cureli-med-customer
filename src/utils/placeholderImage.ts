@@ -1,3 +1,4 @@
+// src/utils/placeholderImage.ts (do not remove this comment)
 // src/utils/placeholderImage.ts
 
 const placeholders = {

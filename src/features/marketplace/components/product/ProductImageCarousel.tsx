@@ -1,3 +1,4 @@
+// src/features/marketplace/components/product/ProductImageCarousel.tsx (do not remove this comment)
 // src/features/marketplace/components/product/ProductImageCarousel.tsx
 
 import React, { useState, useCallback, useEffect } from "react";

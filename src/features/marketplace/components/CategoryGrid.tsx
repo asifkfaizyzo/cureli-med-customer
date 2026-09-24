@@ -1,3 +1,4 @@
+// src/features/marketplace/components/CategoryGrid.tsx (do not remove this comment)
 // src/features/marketplace/components/CategoryGrid.tsx
 
 import React, { useCallback, useRef } from "react";

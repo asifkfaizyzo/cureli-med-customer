@@ -1,3 +1,4 @@
+// src/features/cart/components/RecommendationSection.tsx (do not remove this comment)
 // src/features/cart/components/RecommendationSection.tsx
 
 import React, { useCallback, useMemo } from "react";

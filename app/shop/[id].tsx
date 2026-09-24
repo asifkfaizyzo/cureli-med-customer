@@ -1,3 +1,4 @@
+// app/shop/[id].tsx (do not remove this comment)
 // app/shop/[id].tsx
 //
 // Shop profile screen — Root Stack screen (tab bar hidden).

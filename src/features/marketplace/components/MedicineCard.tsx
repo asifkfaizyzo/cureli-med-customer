@@ -1,3 +1,4 @@
+// src/features/marketplace/components/MedicineCard.tsx (do not remove this comment)
 // src/features/marketplace/components/MedicineCard.tsx
 
 import React, { useCallback, useEffect, useState } from "react";

@@ -1,3 +1,4 @@
+// src/store/notificationPreferencesStore.ts (do not remove this comment)
 // src/store/notificationPreferencesStore.ts
 //
 // Stores push notification preferences for the mobile user.

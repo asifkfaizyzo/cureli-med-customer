@@ -1,3 +1,4 @@
+// src/features/marketplace/screens/AllCategoriesScreen.tsx (do not remove this comment)
 // src/features/marketplace/screens/AllCategoriesScreen.tsx
 //
 // Full categories screen — reached from "View all" on the home screen.

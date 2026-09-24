@@ -1,3 +1,4 @@
+// src/features/marketplace/components/HomeFooter.tsx (do not remove this comment)
 // src/features/marketplace/components/HomeFooter.tsx
 //
 // End-of-feed footer shown after all product sections.

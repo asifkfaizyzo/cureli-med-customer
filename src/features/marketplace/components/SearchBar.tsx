@@ -1,3 +1,4 @@
+// src/features/marketplace/components/SearchBar.tsx (do not remove this comment)
 // src/features/marketplace/components/SearchBar.tsx
 
 import React from "react";

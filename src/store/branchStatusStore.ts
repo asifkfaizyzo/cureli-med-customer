@@ -1,3 +1,4 @@
+// src/store/branchStatusStore.ts (do not remove this comment)
 // cureli-mobile/src/store/branchStatusStore.ts
 // NEW FILE — same pattern as orderNotificationStore.ts
 

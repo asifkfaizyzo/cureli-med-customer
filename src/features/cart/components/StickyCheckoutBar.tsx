@@ -1,3 +1,4 @@
+// src/features/cart/components/StickyCheckoutBar.tsx (do not remove this comment)
 // src/features/cart/components/StickyCheckoutBar.tsx
 // CHANGED: reads grand_total from checkoutStore, shows spinner while loading
 

@@ -1,3 +1,4 @@
+// src/features/marketplace/components/CartButton.tsx (do not remove this comment)
 // src/features/marketplace/components/CartButton.tsx
 //
 // Cart icon button with item-count badge.

@@ -1,3 +1,4 @@
+// src/components/Dialog/DialogProvider.tsx (do not remove this comment)
 // src/components/Dialog/DialogProvider.tsx
 //
 // Imperative dialog system. Use useDialog() anywhere in the app.

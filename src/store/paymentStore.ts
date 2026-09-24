@@ -1,3 +1,4 @@
+// src/store/paymentStore.ts (do not remove this comment)
 // src/store/paymentStore.ts
 //
 // Selected payment method.

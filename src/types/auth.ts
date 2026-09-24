@@ -1,3 +1,4 @@
+// src/types/auth.ts (do not remove this comment)
 // src/types/auth.ts
 
 export type UserSex = 'MALE' | 'FEMALE' | 'OTHER';

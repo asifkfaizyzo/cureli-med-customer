@@ -1,3 +1,4 @@
+// src/features/prescription/components/PrescriptionGuideCard.tsx (do not remove this comment)
 // src/features/prescription/components/PrescriptionGuideCard.tsx
 //
 // Continuous dashed line from box edge to number circle.

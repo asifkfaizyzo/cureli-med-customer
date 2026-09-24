@@ -1,3 +1,4 @@
+// src/components/CartBar/cartBar.constants.ts (do not remove this comment)
 import { Spacing } from "../../theme/spacing";
 
 export const GLOBAL_CART_BAR_HEIGHT = 64;

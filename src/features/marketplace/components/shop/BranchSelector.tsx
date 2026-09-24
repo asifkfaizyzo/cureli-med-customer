@@ -1,3 +1,4 @@
+// src/features/marketplace/components/shop/BranchSelector.tsx (do not remove this comment)
 // src/features/marketplace/components/shop/BranchSelector.tsx
 //
 // Tappable trigger row that opens a modal bottom-sheet branch picker.

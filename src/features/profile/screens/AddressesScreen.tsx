@@ -1,3 +1,4 @@
+// src/features/profile/screens/AddressesScreen.tsx (do not remove this comment)
 // src/features/profile/screens/AddressesScreen.tsx
 
 import React, { useState } from 'react';

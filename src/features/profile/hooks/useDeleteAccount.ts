@@ -1,3 +1,4 @@
+// src/features/profile/hooks/useDeleteAccount.ts (do not remove this comment)
 // src/features/profile/hooks/useDeleteAccount.ts
 //
 // Manages the two-step account deletion flow.

@@ -1,3 +1,4 @@
+// app/product/[id].tsx (do not remove this comment)
 // app/product/[id].tsx
 //
 // Medicine detail screen — Root Stack screen (tab bar hidden).

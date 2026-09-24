@@ -1,3 +1,4 @@
+// app/(tabs)/categories.tsx (do not remove this comment)
 // app/(tabs)/categories.tsx
 //
 // Categories tab route.

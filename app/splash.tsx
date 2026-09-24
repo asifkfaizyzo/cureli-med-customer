@@ -1,3 +1,4 @@
+// app/splash.tsx (do not remove this comment)
 // app/splash.tsx
 
 import { useEffect, useRef, useState } from 'react';

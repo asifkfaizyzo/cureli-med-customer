@@ -1,3 +1,4 @@
+// src/features/marketplace/components/HomeHeader.tsx (do not remove this comment)
 // src/features/marketplace/components/HomeHeader.tsx
 //
 // Top safe-area header for the marketplace home.

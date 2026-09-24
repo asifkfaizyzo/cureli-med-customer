@@ -1,3 +1,4 @@
+// src/features/marketplace/hooks/useBannerConfig.ts (do not remove this comment)
 // src/features/marketplace/hooks/useBannerConfig.ts
 
 import { useQuery } from "@tanstack/react-query";

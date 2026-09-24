@@ -1,3 +1,4 @@
+// app/checkout/netbanking.tsx (do not remove this comment)
 // app/checkout/netbanking.tsx
 
 import { NetbankingScreen } from "../../src/features/payment/screens/NetbankingScreen";

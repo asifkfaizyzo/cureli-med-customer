@@ -1,3 +1,4 @@
+// src/features/marketplace/components/shop/CartConflictDialog.tsx (do not remove this comment)
 // src/features/marketplace/components/shop/CartConflictDialog.tsx
 //
 // Modal dialog shown when the user tries to add a medicine from a different

@@ -1,3 +1,4 @@
+// src/features/marketplace/components/product/ShopListingRow.tsx (do not remove this comment)
 import React, { useCallback } from "react";
 import {
   View,

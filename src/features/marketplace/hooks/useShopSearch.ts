@@ -1,3 +1,4 @@
+// src/features/marketplace/hooks/useShopSearch.ts (do not remove this comment)
 // src/features/marketplace/hooks/useShopSearch.ts
 //
 // Debounced shop search via TanStack Query.

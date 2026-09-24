@@ -1,3 +1,4 @@
+// src/features/profile/screens/EditProfileScreen.tsx (do not remove this comment)
 // src/features/profile/screens/EditProfileScreen.tsx
 
 import { MaterialIcons } from "@expo/vector-icons";

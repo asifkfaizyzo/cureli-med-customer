@@ -1,3 +1,4 @@
+// src/types/feed.ts (do not remove this comment)
 // src/types/feed.ts
 //
 // Types for the home feed endpoint (GET /mobile/medicines/feed).

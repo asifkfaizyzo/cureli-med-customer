@@ -1,3 +1,4 @@
+// src/features/marketplace/components/CategoryRail.tsx (do not remove this comment)
 // src/features/marketplace/components/CategoryRail.tsx
 //
 // Horizontally scrollable Quick Categories rail.

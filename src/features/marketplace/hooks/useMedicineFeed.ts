@@ -1,3 +1,4 @@
+// src/features/marketplace/hooks/useMedicineFeed.ts (do not remove this comment)
 // src/features/marketplace/hooks/useMedicineFeed.ts
 //
 // Paginated medicine feed via TanStack Query's useInfiniteQuery.

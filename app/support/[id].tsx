@@ -1,3 +1,4 @@
+// app/support/[id].tsx (do not remove this comment)
 import React from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { TicketDetailScreen } from '../../src/features/support/screens/TicketDetailScreen';

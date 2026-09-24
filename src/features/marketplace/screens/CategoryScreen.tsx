@@ -1,3 +1,4 @@
+// src/features/marketplace/screens/CategoryScreen.tsx (do not remove this comment)
 // src/features/marketplace/screens/CategoryScreen.tsx
 //
 // Full category screen.

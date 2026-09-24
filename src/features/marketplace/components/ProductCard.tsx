@@ -1,3 +1,4 @@
+// src/features/marketplace/components/ProductCard.tsx (do not remove this comment)
 // src/features/marketplace/components/ProductCard.tsx
 
 import React, { useCallback, useEffect, useState } from "react";

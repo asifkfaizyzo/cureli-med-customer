@@ -1,3 +1,4 @@
+// src/features/payment/components/PaymentSectionCard.tsx (do not remove this comment)
 // src/features/payment/components/PaymentSectionCard.tsx
 //
 // White card containing a section title + list of PaymentMethodRows.

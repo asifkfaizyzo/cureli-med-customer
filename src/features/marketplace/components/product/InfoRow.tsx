@@ -1,3 +1,4 @@
+// src/features/marketplace/components/product/InfoRow.tsx (do not remove this comment)
 // src/features/marketplace/components/product/InfoRow.tsx
 //
 // A single label/value row in the Medicine Info section.

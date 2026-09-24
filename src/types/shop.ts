@@ -1,3 +1,4 @@
+// src/types/shop.ts (do not remove this comment)
 // src/types/shop.ts
 //
 // Canonical types for Cureli mobile shop discovery.

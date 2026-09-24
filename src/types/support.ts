@@ -1,3 +1,4 @@
+// src/types/support.ts (do not remove this comment)
 export type CustomerTicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 
 export type CustomerTicketCategory =

@@ -1,3 +1,4 @@
+// src/features/marketplace/hooks/useShopProfile.ts (do not remove this comment)
 // cureli-mobile/src/features/marketplace/hooks/useShopProfile.ts
 //
 // Fetches the full shop profile for the shop detail screen.

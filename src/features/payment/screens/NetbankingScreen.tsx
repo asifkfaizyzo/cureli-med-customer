@@ -1,3 +1,4 @@
+// src/features/payment/screens/NetbankingScreen.tsx (do not remove this comment)
 // src/features/payment/screens/NetbankingScreen.tsx
 //
 // Bank selection screen for netbanking.

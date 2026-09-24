@@ -1,3 +1,4 @@
+// src/features/marketplace/components/product/UnavailableBanner.tsx (do not remove this comment)
 // src/features/marketplace/components/product/UnavailableBanner.tsx
 //
 // Shown in place of the marketplace summary card when availableNearYou

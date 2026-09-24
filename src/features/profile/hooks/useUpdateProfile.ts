@@ -1,3 +1,4 @@
+// src/features/profile/hooks/useUpdateProfile.ts (do not remove this comment)
 // src/features/profile/hooks/useUpdateProfile.ts
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';

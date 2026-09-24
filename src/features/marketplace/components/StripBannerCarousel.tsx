@@ -1,3 +1,4 @@
+// src/features/marketplace/components/StripBannerCarousel.tsx (do not remove this comment)
 // src/features/marketplace/components/StripBannerCarousel.tsx
 
 import React, { useCallback, useRef, useState, useEffect } from "react";

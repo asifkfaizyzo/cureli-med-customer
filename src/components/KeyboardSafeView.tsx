@@ -1,3 +1,4 @@
+// src/components/KeyboardSafeView.tsx (do not remove this comment)
 import React, { useMemo } from 'react';
 import {
   KeyboardAvoidingView,

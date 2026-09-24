@@ -1,3 +1,4 @@
+// src/features/prescription-request/screens/PrescriptionRequestDetailScreen.tsx (do not remove this comment)
 // src/features/prescription-request/screens/PrescriptionRequestDetailScreen.tsx
 //
 // Thin orchestrator — owns data fetching, checkout flow, and derived state.

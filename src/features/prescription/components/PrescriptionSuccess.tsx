@@ -1,3 +1,4 @@
+// src/features/prescription/components/PrescriptionSuccess.tsx (do not remove this comment)
 // src/features/prescription/components/PrescriptionSuccess.tsx
 //
 // Success state after prescription is submitted.

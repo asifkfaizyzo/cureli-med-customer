@@ -1,3 +1,4 @@
+// src/store/cartStore.ts (do not remove this comment)
 // src/store/cartStore.ts
 //
 // Per-user cart store with MMKV persistence.

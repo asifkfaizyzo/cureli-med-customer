@@ -1,3 +1,4 @@
+// src/features/marketplace/components/product/MarketplaceSummaryCard.tsx (do not remove this comment)
 // src/features/marketplace/components/product/MarketplaceSummaryCard.tsx
 //
 // Horizontal summary card on the product detail screen.

@@ -1,3 +1,4 @@
+// src/features/payment/screens/PaymentSettingsScreen.tsx (do not remove this comment)
 // src/features/payment/screens/PaymentSettingsScreen.tsx
 
 import React, { useCallback } from "react";

@@ -1,3 +1,4 @@
+// src/hooks/useIsBottomTabRoute.ts (do not remove this comment)
 import { useMemo } from "react";
 import { usePathname } from "expo-router";
 

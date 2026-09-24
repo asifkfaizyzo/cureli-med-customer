@@ -1,3 +1,4 @@
+// src/features/prescription/screens/UploadPrescriptionScreen.tsx (do not remove this comment)
 // src/features/prescription/screens/UploadPrescriptionScreen.tsx
 
 import React, { useCallback, useState } from "react";

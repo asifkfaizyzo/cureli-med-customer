@@ -1,3 +1,4 @@
+// src/services/pushNotificationService.ts (do not remove this comment)
 // cureli-mobile/src/services/pushNotificationService.ts
 
 import * as Notifications from 'expo-notifications';

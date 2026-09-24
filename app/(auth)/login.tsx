@@ -1,3 +1,4 @@
+// app/(auth)/login.tsx (do not remove this comment)
 // app/(auth)/login.tsx
 
 import { MaterialIcons } from "@expo/vector-icons";

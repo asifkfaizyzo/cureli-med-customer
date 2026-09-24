@@ -1,3 +1,4 @@
+// src/store/authStore.ts (do not remove this comment)
 import { create } from 'zustand';
 import { StorageService } from '../services/storage';
 import { authApi } from '../services/api';

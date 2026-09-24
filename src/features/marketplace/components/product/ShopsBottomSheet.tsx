@@ -1,3 +1,4 @@
+// src/features/marketplace/components/product/ShopsBottomSheet.tsx (do not remove this comment)
 // src/features/marketplace/components/product/ShopsBottomSheet.tsx
 //
 // Bottom sheet showing branches that stock a specific medicine.

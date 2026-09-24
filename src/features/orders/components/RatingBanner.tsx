@@ -1,3 +1,4 @@
+// src/features/orders/components/RatingBanner.tsx (do not remove this comment)
 // src/features/orders/components/RatingBanner.tsx
 
 import React from 'react';

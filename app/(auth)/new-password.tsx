@@ -1,3 +1,4 @@
+// app/(auth)/new-password.tsx (do not remove this comment)
 import {
   View,
   Text,

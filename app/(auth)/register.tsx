@@ -1,3 +1,4 @@
+// app/(auth)/register.tsx (do not remove this comment)
 // app/(auth)/register.tsx
 
 import {

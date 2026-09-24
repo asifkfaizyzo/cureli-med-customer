@@ -1,3 +1,4 @@
+// src/store/marketplaceFilterStore.ts (do not remove this comment)
 // src/store/marketplaceFilterStore.ts
 //
 // Shared category filter state for marketplace screens.

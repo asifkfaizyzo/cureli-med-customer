@@ -1,3 +1,4 @@
+// src/features/marketplace/api/banners.api.ts (do not remove this comment)
 // src/features/marketplace/api/banners.api.ts
 
 import { api } from "../../../services/api";

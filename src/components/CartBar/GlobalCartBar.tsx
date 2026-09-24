@@ -1,3 +1,4 @@
+// src/components/CartBar/GlobalCartBar.tsx (do not remove this comment)
 // src/components/CartBar/GlobalCartBar.tsx
 
 import React, { useCallback, useMemo } from "react";

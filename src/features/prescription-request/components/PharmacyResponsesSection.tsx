@@ -1,3 +1,4 @@
+// src/features/prescription-request/components/PharmacyResponsesSection.tsx (do not remove this comment)
 // src/features/prescription-request/components/PharmacyResponsesSection.tsx
 //
 // Renders the "Pharmacy Responses" section of the detail screen.

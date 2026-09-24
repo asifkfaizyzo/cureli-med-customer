@@ -1,3 +1,4 @@
+// src/features/orders/components/PriceRow.tsx (do not remove this comment)
 // src/features/orders/components/PriceRow.tsx
 
 import React from 'react';

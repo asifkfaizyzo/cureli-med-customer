@@ -1,3 +1,4 @@
+// src/features/cart/screens/CartScreen.tsx (do not remove this comment)
 // src/features/cart/screens/CartScreen.tsx
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";

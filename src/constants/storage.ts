@@ -1,3 +1,4 @@
+// src/constants/storage.ts (do not remove this comment)
 // src/constants/storage.ts
 //
 // MMKV key constants for Cureli Mobile.

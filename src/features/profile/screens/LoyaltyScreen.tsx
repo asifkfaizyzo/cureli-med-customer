@@ -1,3 +1,4 @@
+// src/features/profile/screens/LoyaltyScreen.tsx (do not remove this comment)
 // src/features/profile/screens/LoyaltyScreen.tsx
 
 import React, { useEffect, useState } from "react";

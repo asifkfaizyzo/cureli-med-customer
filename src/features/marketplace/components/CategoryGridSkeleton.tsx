@@ -1,3 +1,4 @@
+// src/features/marketplace/components/CategoryGridSkeleton.tsx (do not remove this comment)
 // src/features/marketplace/components/CategoryGridSkeleton.tsx
 //
 // Skeleton grid matching the exact 3-column layout.

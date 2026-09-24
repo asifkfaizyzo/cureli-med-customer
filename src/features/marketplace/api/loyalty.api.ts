@@ -1,3 +1,4 @@
+// src/features/marketplace/api/loyalty.api.ts (do not remove this comment)
 // src/features/marketplace/api/loyalty.api.ts
 
 import { api } from "../../../services/api";

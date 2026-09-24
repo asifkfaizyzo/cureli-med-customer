@@ -1,3 +1,4 @@
+// src/features/marketplace/components/HeaderFadeStrip.tsx (do not remove this comment)
 // src/features/marketplace/components/HeaderFadeStrip.tsx
 //
 // Soft visual transition between the GradientHeader (purple gradient)

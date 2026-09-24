@@ -1,3 +1,4 @@
+// src/features/profile/components/LocationSearchBar.tsx (do not remove this comment)
 // src/features/profile/components/LocationSearchBar.tsx
 //
 // Search input for location picker.

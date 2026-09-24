@@ -1,3 +1,4 @@
+// src/features/profile/components/ProfileMenuItem.tsx (do not remove this comment)
 // src/features/profile/components/ProfileMenuItem.tsx
 
 import React from 'react';

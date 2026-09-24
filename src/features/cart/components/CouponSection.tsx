@@ -1,3 +1,4 @@
+// src/features/cart/components/CouponSection.tsx (do not remove this comment)
 // src/features/cart/components/CouponSection.tsx
 
 import React, { useState } from "react";

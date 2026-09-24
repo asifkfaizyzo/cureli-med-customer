@@ -1,3 +1,4 @@
+// src/features/marketplace/hooks/useHomeScreenConfig.ts (do not remove this comment)
 // src/features/marketplace/hooks/useHomeScreenConfig.ts
 //
 // Fetches home screen layout config from GET /mobile/app-config/home-screen.

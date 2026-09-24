@@ -1,3 +1,4 @@
+// src/features/marketplace/components/product/FindPharmaciesSection.tsx (do not remove this comment)
 // src/features/marketplace/components/product/FindPharmaciesSection.tsx
 
 import React, { useCallback, useEffect, useRef, useState } from "react";

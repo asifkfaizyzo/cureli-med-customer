@@ -1,3 +1,4 @@
+// src/features/orders/constants/orders.constants.ts (do not remove this comment)
 // src/features/orders/constants/orders.constants.ts
 // Changes:
 //   - READY_FOR_PICKUP label: 'Out for Delivery' (correct for delivery model)

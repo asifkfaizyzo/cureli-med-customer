@@ -1,3 +1,4 @@
+// src/features/profile/hooks/useProfile.ts (do not remove this comment)
 // src/features/profile/hooks/useProfile.ts
 //
 // React Query hook for GET /mobile/auth/me.

@@ -1,3 +1,4 @@
+// src/features/cart/components/PatientSelectorCard.tsx (do not remove this comment)
 // src/features/cart/components/PatientSelectorCard.tsx
 
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';

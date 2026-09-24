@@ -1,3 +1,4 @@
+// src/features/marketplace/components/CategoryCard.tsx (do not remove this comment)
 // src/features/marketplace/components/CategoryCard.tsx
 //
 // Bigger category tile with image-first rendering.

@@ -1,3 +1,4 @@
+// app/(tabs)/home.tsx (do not remove this comment)
 // app/(tabs)/home.tsx
 //
 // Home tab — route file only. All UI lives in the marketplace feature screen.

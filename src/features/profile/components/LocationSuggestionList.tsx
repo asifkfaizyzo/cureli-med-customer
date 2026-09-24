@@ -1,3 +1,4 @@
+// src/features/profile/components/LocationSuggestionList.tsx (do not remove this comment)
 // src/features/profile/components/LocationSuggestionList.tsx
 //
 // Scrollable list of place suggestions below the search bar.

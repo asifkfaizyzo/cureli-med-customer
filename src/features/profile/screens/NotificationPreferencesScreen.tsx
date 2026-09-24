@@ -1,3 +1,4 @@
+// src/features/profile/screens/NotificationPreferencesScreen.tsx (do not remove this comment)
 // src/features/profile/screens/NotificationPreferencesScreen.tsx
 // Full replacement — wires existing UI to the real store
 

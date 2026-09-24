@@ -1,3 +1,4 @@
+// src/features/profile/screens/SettingsScreen.tsx (do not remove this comment)
 // src/features/profile/screens/SettingsScreen.tsx
 //
 // App settings screen with theme picker (Light / Dark only).

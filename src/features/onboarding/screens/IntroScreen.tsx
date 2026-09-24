@@ -1,3 +1,4 @@
+// src/features/onboarding/screens/IntroScreen.tsx (do not remove this comment)
 // src/features/onboarding/screens/IntroScreen.tsx
 
 import { useRef, useState } from 'react';

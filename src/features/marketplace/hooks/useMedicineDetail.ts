@@ -1,3 +1,4 @@
+// src/features/marketplace/hooks/useMedicineDetail.ts (do not remove this comment)
 // src/features/marketplace/hooks/useMedicineDetail.ts
 //
 // Fetches a single variant (+ siblings) for the product detail screen.

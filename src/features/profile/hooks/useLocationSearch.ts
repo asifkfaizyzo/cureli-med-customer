@@ -1,3 +1,4 @@
+// src/features/profile/hooks/useLocationSearch.ts (do not remove this comment)
 // src/features/profile/hooks/useLocationSearch.ts
 //
 // Debounced place search hook.

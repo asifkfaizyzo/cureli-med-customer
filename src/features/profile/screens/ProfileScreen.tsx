@@ -1,3 +1,4 @@
+// src/features/profile/screens/ProfileScreen.tsx (do not remove this comment)
 //cureli-mobile\src\features\profile\screens\ProfileScreen.tsx
 import { MaterialIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";

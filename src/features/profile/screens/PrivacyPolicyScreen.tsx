@@ -1,3 +1,4 @@
+// src/features/profile/screens/PrivacyPolicyScreen.tsx (do not remove this comment)
 import React from "react";
 import {
   ScrollView,

@@ -1,3 +1,4 @@
+// src/services/storage.ts (do not remove this comment)
 // src/services/storage.ts
 //
 // MMKV wrapper for Cureli Mobile.

@@ -1,3 +1,4 @@
+// src/features/marketplace/constants/topLevelCategories.ts (do not remove this comment)
 // src/features/marketplace/constants/topLevelCategories.ts
 //
 // Defines the three top-level "hero" categories shown on the home screen.

@@ -1,3 +1,4 @@
+// src/features/profile/components/EmptyAddressState.tsx (do not remove this comment)
 // src/features/profile/components/EmptyAddressState.tsx
 
 import React from 'react';

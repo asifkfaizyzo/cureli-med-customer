@@ -1,3 +1,4 @@
+// src/features/prescription-request/components/PrescriptionFilesSection.tsx (do not remove this comment)
 // src/features/prescription-request/components/PrescriptionFilesSection.tsx
 //
 // Collapsible accordion that shows prescription file thumbnails.

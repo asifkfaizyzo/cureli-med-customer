@@ -1,3 +1,4 @@
+// app/_layout.tsx (do not remove this comment)
 // cureli-mobile/app/_layout.tsx
 import {
   Inter_400Regular,

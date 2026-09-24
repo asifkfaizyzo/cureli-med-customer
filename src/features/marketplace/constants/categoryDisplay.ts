@@ -1,3 +1,4 @@
+// src/features/marketplace/constants/categoryDisplay.ts (do not remove this comment)
 // src/features/marketplace/constants/categoryDisplay.ts
 //
 // Frontend display layer for marketplace categories.

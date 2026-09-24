@@ -1,3 +1,4 @@
+// src/features/payment/components/PaymentMethodRow.tsx (do not remove this comment)
 // src/features/payment/components/PaymentMethodRow.tsx
 //
 // Single payment method row inside a section card.

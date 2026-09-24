@@ -1,3 +1,4 @@
+// src/features/marketplace/components/HeroCarousel.tsx (do not remove this comment)
 // src/features/marketplace/components/HeroCarousel.tsx
 
 import React, { useCallback, useMemo, useState } from "react";

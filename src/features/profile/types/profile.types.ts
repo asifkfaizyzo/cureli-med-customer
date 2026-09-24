@@ -1,3 +1,4 @@
+// src/features/profile/types/profile.types.ts (do not remove this comment)
 // src/features/profile/types/profile.types.ts
 
 import type { AddressLabel } from "../constants/profile.constants";

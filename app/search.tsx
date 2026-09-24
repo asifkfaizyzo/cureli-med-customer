@@ -1,3 +1,4 @@
+// app/search.tsx (do not remove this comment)
 // app/search.tsx
 //
 // Unified search screen with Medicines / Shops toggle.

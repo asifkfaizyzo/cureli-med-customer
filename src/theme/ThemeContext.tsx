@@ -1,3 +1,4 @@
+// src/theme/ThemeContext.tsx (do not remove this comment)
 // src/theme/ThemeContext.tsx
 //
 // Provides theme colors and mode to the entire app.

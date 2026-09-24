@@ -1,3 +1,4 @@
+// src/features/profile/components/MemberCard.tsx (do not remove this comment)
 // src/features/profile/components/MemberCard.tsx
 
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';

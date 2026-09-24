@@ -1,3 +1,4 @@
+// src/features/profile/components/LocationMapPicker.tsx (do not remove this comment)
 // src/features/profile/components/LocationMapPicker.tsx
 
 import React, { useRef, useEffect, useState } from 'react';

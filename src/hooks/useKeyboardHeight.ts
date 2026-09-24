@@ -1,3 +1,4 @@
+// src/hooks/useKeyboardHeight.ts (do not remove this comment)
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform } from 'react-native';
 

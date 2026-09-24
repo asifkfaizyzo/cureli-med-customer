@@ -1,3 +1,4 @@
+// src/components/OrderBar/GlobalOrderBar.tsx (do not remove this comment)
 import React, { useCallback, useMemo, useEffect } from "react";
 import {
   Text,

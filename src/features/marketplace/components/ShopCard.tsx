@@ -1,3 +1,4 @@
+// src/features/marketplace/components/ShopCard.tsx (do not remove this comment)
 //Q:\YourZeroesAndOnes\cureli\curely_erp\cureli-mobile\src\features\marketplace\components\ShopCard.tsx
 
 import React, { memo } from "react";

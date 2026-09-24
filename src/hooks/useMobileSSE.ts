@@ -1,3 +1,4 @@
+// src/hooks/useMobileSSE.ts (do not remove this comment)
 // cureli-mobile/src/hooks/useMobileSSE.ts
 
 import { useEffect, useRef, useCallback } from 'react';

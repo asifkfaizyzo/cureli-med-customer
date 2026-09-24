@@ -1,3 +1,4 @@
+// src/features/marketplace/types/marketplace.types.ts (do not remove this comment)
 // src/features/marketplace/types/marketplace.types.ts
 //
 // Re-export the canonical medicine types so feature code imports stay local.

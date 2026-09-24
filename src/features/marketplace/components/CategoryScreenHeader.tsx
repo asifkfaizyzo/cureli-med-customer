@@ -1,3 +1,4 @@
+// src/features/marketplace/components/CategoryScreenHeader.tsx (do not remove this comment)
 // src/features/marketplace/components/CategoryScreenHeader.tsx
 //
 // Header for the categories tab screen.

@@ -1,3 +1,4 @@
+// src/constants/pushCategories.ts (do not remove this comment)
 // src/constants/pushCategories.ts
 
 export const PUSH_CATEGORIES = {

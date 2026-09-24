@@ -1,3 +1,4 @@
+// src/theme/colors.ts (do not remove this comment)
 // src/theme/colors.ts
 
 export interface ColorPalette {

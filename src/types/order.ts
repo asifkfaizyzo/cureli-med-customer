@@ -1,3 +1,4 @@
+// src/types/order.ts (do not remove this comment)
 // src/types/order.ts
 // Updated: Added payment_status to MobileOrderSummary to support refunded states in lists
 

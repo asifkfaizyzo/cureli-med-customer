@@ -1,3 +1,4 @@
+// src/features/prescription/components/UploadOptionCard.tsx (do not remove this comment)
 // src/features/prescription/components/UploadOptionCard.tsx
 //
 // Single upload option tile — used in a 3-across row.

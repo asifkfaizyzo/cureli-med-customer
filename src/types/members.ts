@@ -1,3 +1,4 @@
+// src/types/members.ts (do not remove this comment)
 // src/types/members.ts
 
 import type { UserSex } from './auth';

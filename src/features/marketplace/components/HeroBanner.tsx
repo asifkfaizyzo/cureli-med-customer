@@ -1,3 +1,4 @@
+// src/features/marketplace/components/HeroBanner.tsx (do not remove this comment)
 // src/features/marketplace/components/HeroBanner.tsx
 //
 // Single premium marketplace hero banner.

@@ -1,3 +1,4 @@
+// src/features/onboarding/screens/OnboardingEmailScreen.tsx (do not remove this comment)
 // src/features/onboarding/screens/OnboardingEmailScreen.tsx
 
 import { useState } from "react";

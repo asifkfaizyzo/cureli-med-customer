@@ -1,3 +1,4 @@
+// app/index.tsx (do not remove this comment)
 // app/index.tsx
 
 import { useEffect, useRef } from 'react';

@@ -1,3 +1,4 @@
+// src/components/RemoteImage.tsx (do not remove this comment)
 // src/components/RemoteImage.tsx
 
 import React, { useEffect, useState, useCallback } from "react";

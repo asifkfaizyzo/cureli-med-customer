@@ -1,3 +1,4 @@
+// src/features/marketplace/components/SectionHeader.tsx (do not remove this comment)
 // src/features/marketplace/components/SectionHeader.tsx
 //
 // Titled section header with optional clickable right-side hint.

@@ -1,3 +1,4 @@
+// src/features/profile/components/ProfileSection.tsx (do not remove this comment)
 // src/features/profile/components/ProfileSection.tsx
 
 import React from 'react';

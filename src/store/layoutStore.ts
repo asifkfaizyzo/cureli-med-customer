@@ -1,3 +1,4 @@
+// src/store/layoutStore.ts (do not remove this comment)
 //Q:\YourZeroesAndOnes\cureli\curely_erp\cureli-mobile\src\store\layoutStore.ts
 import { create } from "zustand";
 

@@ -1,3 +1,4 @@
+// src/types/medicine.ts (do not remove this comment)
 // src/types/medicine.ts
 //
 // Canonical types for the Cureli marketplace medicine discovery feature.

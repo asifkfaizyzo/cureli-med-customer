@@ -1,3 +1,4 @@
+// src/features/prescription-request/components/ImageViewer.tsx (do not remove this comment)
 // src/features/prescription-request/components/ImageViewer.tsx
 //
 // Fullscreen pinch-zoom image viewer rendered inside a Modal.

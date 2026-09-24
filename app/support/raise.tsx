@@ -1,3 +1,4 @@
+// app/support/raise.tsx (do not remove this comment)
 import React from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { RaiseTicketScreen } from '../../src/features/support/screens/RaiseTicketScreen';

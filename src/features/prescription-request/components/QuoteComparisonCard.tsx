@@ -1,3 +1,4 @@
+// src/features/prescription-request/components/QuoteComparisonCard.tsx (do not remove this comment)
 // src/features/prescription-request/components/QuoteComparisonCard.tsx
 //
 // Displays a single pharmacy's response in the request detail screen.

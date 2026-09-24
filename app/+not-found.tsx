@@ -1,3 +1,4 @@
+// app/+not-found.tsx (do not remove this comment)
 // app/+not-found.tsx
 //
 // Catches any unmatched route including curelimobile:///

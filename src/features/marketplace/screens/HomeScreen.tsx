@@ -1,3 +1,4 @@
+// src/features/marketplace/screens/HomeScreen.tsx (do not remove this comment)
 // src/features/marketplace/screens/HomeScreen.tsx
 
 import React, { useCallback, useState } from "react";

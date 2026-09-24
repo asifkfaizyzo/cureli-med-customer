@@ -1,3 +1,4 @@
+// src/features/prescription-request/screens/PrescriptionRequestUploadScreen.tsx (do not remove this comment)
 // src/features/prescription-request/screens/PrescriptionRequestUploadScreen.tsx
 // Step 1 — Upload prescription or medicine photos + choose delivery address
 

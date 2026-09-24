@@ -1,3 +1,4 @@
+// src/features/profile/constants/profile.constants.ts (do not remove this comment)
 // src/features/profile/constants/profile.constants.ts
 
 export const QUERY_KEYS = {

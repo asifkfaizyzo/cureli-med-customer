@@ -1,3 +1,4 @@
+// src/features/marketplace/components/shop/MedicineRow.tsx (do not remove this comment)
 // cureli-mobile/src/features/marketplace/components/shop/MedicineRow.tsx
 //
 // Individual medicine row on the mobile shop page.

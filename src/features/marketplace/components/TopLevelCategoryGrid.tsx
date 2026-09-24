@@ -1,3 +1,4 @@
+// src/features/marketplace/components/TopLevelCategoryGrid.tsx (do not remove this comment)
 // src/features/marketplace/components/TopLevelCategoryGrid.tsx
 
 import React, { useCallback, useEffect, useMemo } from "react";  // ← useEffect added

@@ -1,3 +1,4 @@
+// src/features/marketplace/utils/generateMarketplaceData.ts (do not remove this comment)
 // src/features/marketplace/utils/generateMarketplaceData.ts
 //
 // DETERMINISTIC fake marketplace decoration.

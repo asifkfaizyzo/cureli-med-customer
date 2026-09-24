@@ -1,3 +1,4 @@
+// app/(auth)/forgot-password.tsx (do not remove this comment)
 // app/(auth)/forgot-password.tsx
 
 import {

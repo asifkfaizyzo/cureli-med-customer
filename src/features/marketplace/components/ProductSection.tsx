@@ -1,3 +1,4 @@
+// src/features/marketplace/components/ProductSection.tsx (do not remove this comment)
 // src/features/marketplace/components/ProductSection.tsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {

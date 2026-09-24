@@ -1,3 +1,4 @@
+// src/features/marketplace/constants/dummyShops.ts (do not remove this comment)
 export interface DummyShop {
   shopId: string;
   name: string;

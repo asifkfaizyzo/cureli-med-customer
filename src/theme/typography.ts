@@ -1,3 +1,4 @@
+// src/theme/typography.ts (do not remove this comment)
 // src/theme/typography.ts
 //
 // Type scale for Cureli Mobile.

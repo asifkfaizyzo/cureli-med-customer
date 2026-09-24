@@ -1,3 +1,4 @@
+// src/features/support/api/support.api.ts (do not remove this comment)
 import { api } from '../../../services/api';
 import type {
   CustomerTicketSummary,

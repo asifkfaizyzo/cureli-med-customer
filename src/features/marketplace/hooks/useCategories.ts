@@ -1,3 +1,4 @@
+// src/features/marketplace/hooks/useCategories.ts (do not remove this comment)
 // src/features/marketplace/hooks/useCategories.ts
 //
 // Fetches the curated Quick Categories list (GET /mobile/medicines/categories).

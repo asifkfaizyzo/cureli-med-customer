@@ -1,3 +1,4 @@
+// src/features/support/screens/MyTicketsScreen.tsx (do not remove this comment)
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,

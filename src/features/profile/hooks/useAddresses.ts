@@ -1,3 +1,4 @@
+// src/features/profile/hooks/useAddresses.ts (do not remove this comment)
 // src/features/profile/hooks/useAddresses.ts
 //
 // React Query hook for GET /mobile/users/addresses.

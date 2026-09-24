@@ -1,3 +1,4 @@
+// src/features/profile/screens/DeleteAccountScreen.tsx (do not remove this comment)
 // src/features/profile/screens/DeleteAccountScreen.tsx
 
 import React, { useState, useRef, useEffect } from 'react';

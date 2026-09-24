@@ -1,3 +1,4 @@
+// src/features/marketplace/hooks/useHomeFeed.ts (do not remove this comment)
 // src/features/marketplace/hooks/useHomeFeed.ts
 //
 // Fetches the complete home feed from GET /mobile/medicines/feed.

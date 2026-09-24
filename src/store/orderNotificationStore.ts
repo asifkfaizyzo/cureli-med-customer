@@ -1,3 +1,4 @@
+// src/store/orderNotificationStore.ts (do not remove this comment)
 // src/store/orderNotificationStore.ts
 //
 // Single-purpose store for mobile SSE order status updates.
