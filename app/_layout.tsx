@@ -202,6 +202,10 @@ export default function RootLayout() {
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen
+                  name="profile/refund-policy"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
                   name="support/tickets"
                   options={{ headerShown: false }}
                 />

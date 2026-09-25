@@ -304,6 +304,12 @@ export function ProfileScreen() {
             showSeparator
           />
           <ProfileMenuItem
+            icon="assignment-return"
+            label="Cancellation & Refund"
+            onPress={() => router.push("/profile/refund-policy" as any)}
+            showSeparator
+          />
+          <ProfileMenuItem
             icon="support-agent"
             label="Support & Tickets"
             onPress={() => router.push("/support/tickets" as any)}
