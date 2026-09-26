@@ -1,5 +1,4 @@
 // src/features/orders/screens/OrderDetailScreen.tsx (do not remove this comment)
-// src/features/orders/screens/OrderDetailScreen.tsx
 
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
