@@ -1,5 +1,4 @@
 // src/features/cart/hooks/useCheckout.ts (do not remove this comment)
-//cureli-mobile\src\features\cart\hooks\useCheckout.ts
 import { useCallback, useEffect, useRef } from "react";
 import RazorpayCheckout from "react-native-razorpay";
 import { useDialog } from "../../../components/Dialog/DialogProvider";
@@ -12,7 +11,7 @@ import { useAddresses } from "../../profile/hooks/useAddresses";
 
 interface UseCheckoutOptions {
   distanceKm: number | null;
-  onSuccess: () => void;
+  onSuccess: (orderId?: string) => void;
 }
 
 export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
@@ -180,17 +179,22 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
         razorpay_signature: string;
       };
 
-      await checkoutApi.confirm({
+      const confirmRes = await checkoutApi.confirm({
         session_id,
         razorpay_payment_id: paymentData.razorpay_payment_id,
         razorpay_order_id: paymentData.razorpay_order_id,
         razorpay_signature: paymentData.razorpay_signature,
       });
 
+      const orderId: string | undefined =
+        confirmRes?.data?.data?.order_id ||
+        confirmRes?.data?.data?.order?.order_id ||
+        confirmRes?.data?.data?.id;
+
       clearCart();
       clearPrescriptions();
       useCheckoutStore.getState().reset();
-      onSuccess();
+      onSuccess(orderId);
     } catch (err: any) {
       if (err?.code === 0) return;
 

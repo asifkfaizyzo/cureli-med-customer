@@ -1,6 +1,5 @@
 // src/types/order.ts (do not remove this comment)
-// src/types/order.ts
-// Updated: Added payment_status to MobileOrderSummary to support refunded states in lists
+
 
 export type MarketplaceOrderStatus =
   | "PLACED"
@@ -43,6 +42,7 @@ export interface MobileOrderSummary {
   order_id: string;
   order_number: string;
   status: MarketplaceOrderStatus;
+  delivery_status?: DeliveryStatus | null;
   shop_name: string | null;
   total_amount: number;
   requires_prescription: boolean;
@@ -56,7 +56,7 @@ export interface MobileOrderSummary {
   completed_at: string | null;
   rejected_at: string | null;
   cancelled_at: string | null;
-  payment_status?: string | null; // ◄◄ Added here to fix compilation error
+  payment_status?: string | null;
 }
 
 export interface MobileOrderDeliveryAddress {
@@ -78,7 +78,11 @@ export interface MobileOrderDetail {
   order_number: string;
   status: MarketplaceOrderStatus;
   shop_name: string | null;
+  shop_phone: string | null;
   branch_name: string | null;
+  branch_address: string | null;
+  branch_latitude: number | null;
+  branch_longitude: number | null;
   delivery_address: MobileOrderDeliveryAddress;
 
   total_amount: number;
@@ -89,6 +93,20 @@ export interface MobileOrderDetail {
   tip?: number | null;
   grand_total?: number | null;
 
+  // ── Coupon & Loyalty ──────────────────────────────────────────
+  coupon_code?: string | null;
+  coupon_discount_amount?: number | null;
+  loyalty_points_redeemed?: number | null;
+  loyalty_discount_amount?: number | null;
+  loyalty_points_earned?: number | null;
+
+  // ── Patient ───────────────────────────────────────────────────
+  patient_is_self?: boolean;
+  patient_name_snapshot?: string | null;
+
+  // ── Distance ──────────────────────────────────────────────────
+  distance_km?: number | null;
+
   requires_prescription: boolean;
   payment_method: string;
   payment_status?: string | null;
@@ -96,6 +114,9 @@ export interface MobileOrderDetail {
   notes: string | null;
   rejection_reason: string | null;
   rejection_reason_other: string | null;
+  delivery_otp?: string | null;
+  delivery: DeliveryTrackingInfo | null;
+
   placed_at: string;
   accepted_at: string | null;
   ready_at: string | null;
@@ -145,4 +166,66 @@ export interface OrdersListMeta {
   page: number;
   limit: number;
   total_pages: number;
+}
+
+// ── Live Delivery Tracking Types ────────────────────────────────────────────
+
+export interface DeliveryLocation {
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface DeliveryDistances {
+  pickup_km: number | null;
+  drop_km: number | null;
+  total_km: number | null;
+}
+
+export interface DeliveryTimestamps {
+  assigned_at: string | null;
+  accepted_at: string | null;
+  arrived_at_pharmacy_at: string | null;
+  picked_up_at: string | null;
+  arrived_at_customer_at: string | null;
+  delivered_at: string | null;
+}
+
+export type DeliveryStatus =
+  | "PENDING_ASSIGNMENT"
+  | "RIDER_NOTIFIED"
+  | "ACCEPTED"
+  | "ARRIVED_AT_PHARMACY"
+  | "PHARMACY_CONFIRMED"
+  | "PICKED_UP"
+  | "EN_ROUTE"
+  | "ARRIVED_AT_CUSTOMER"
+  | "DELIVERED"
+  | "FAILED"
+  | "CANCELLED";
+
+export interface RiderInfo {
+  rider_id: string;
+  name: string | null;
+  phone: string;
+  photo_url: string | null;
+  vehicle_type: string | null;
+  vehicle_number: string | null;
+  vehicle_make_model: string | null;
+  rating: number;
+  total_ratings: number;
+  current_location: {
+    latitude: number | null;
+    longitude: number | null;
+    last_updated_at: string | null;
+  };
+}
+
+export interface DeliveryTrackingInfo {
+  delivery_id: string;
+  status: DeliveryStatus;
+  pickup_location: DeliveryLocation;
+  drop_location: DeliveryLocation;
+  distances: DeliveryDistances;
+  timestamps: DeliveryTimestamps;
+  rider: RiderInfo | null;
 }

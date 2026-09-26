@@ -11,6 +11,7 @@ import { CONFIG } from '../constants/config';
 import { useOrderNotificationStore } from '../store/orderNotificationStore';
 import { useAuthStore } from '../store/authStore';
 import { useBranchStatusStore } from '../store/branchStatusStore';
+import { useLiveTrackingStore } from '../store/liveTrackingStore';
 import { prescriptionRequestKeys } from '../features/prescription-request/hooks/usePrescriptionRequest';
 
 // ── Custom SSE event names this hook subscribes to ────────────────────────────
@@ -19,7 +20,9 @@ type SSEEvents =
   | 'heartbeat'
   | 'order_status_changed'
   | 'branch_status_changed'
-  | 'prescription_quote_received'; // ← NEW
+  | 'prescription_quote_received'
+  | 'delivery_update'
+  | 'rider_location_update';
 
 const INITIAL_BACKOFF_MS = 2_000;
 const MAX_BACKOFF_MS     = 30_000;
@@ -28,10 +31,9 @@ export function useMobileSSE() {
   const status                = useAuthStore((s) => s.status);
   const setLastStatusUpdate   = useOrderNotificationStore((s) => s.setLastStatusUpdate);
   const setBranchStatusUpdate = useBranchStatusStore((s) => s.setBranchStatusUpdate);
+  const setRiderLocation      = useLiveTrackingStore((s) => s.setRiderLocation);
 
-  // ── NEW ───────────────────────────────────────────────────────────────────
   const queryClient = useQueryClient();
-  // ─────────────────────────────────────────────────────────────────────────
 
   const esRef         = useRef<EventSource<SSEEvents> | null>(null);
   const backoffRef    = useRef<number>(INITIAL_BACKOFF_MS);
@@ -104,7 +106,7 @@ export function useMobileSSE() {
       }
     });
 
-    // ── NEW: Prescription quote received ──────────────────────────────────
+    // ── Prescription quote received ───────────────────────────────────────
     // Fired when a pharmacy sends a quote back to the customer.
     // Invalidates the detail and list queries so any mounted screen
     // refetches immediately without the user needing to pull-to-refresh.
@@ -128,6 +130,59 @@ export function useMobileSSE() {
     });
     // ─────────────────────────────────────────────────────────────────────
 
+    // ── Delivery status changed (rider lifecycle) ────────────────────────
+    // Fired when rider accepts, arrives at pharmacy, picks up, en route,
+    // arrives at customer, or completes delivery.
+    // Invalidates the order detail query so the tracking screen refetches
+    // the latest delivery status, rider info, and OTP visibility.
+    es.addEventListener('delivery_update', (event: CustomEvent<'delivery_update'>) => {
+      if (!event.data) return;
+      try {
+        const data = JSON.parse(event.data);
+        const orderId = data.order_id;
+
+        if (orderId) {
+          // Invalidate the specific order detail query
+          queryClient.invalidateQueries({
+            queryKey: ['order-detail', orderId],
+          });
+          // Also invalidate the active orders list (for GlobalOrderBar)
+          queryClient.invalidateQueries({
+            queryKey: ['active-orders'],
+          });
+          // Also update the notification store so existing polling logic fires
+          setLastStatusUpdate({
+            order_id: orderId,
+            order_number: data.order_number,
+            new_status: data.delivery_status,
+          });
+        }
+      } catch {
+        // Malformed payload — ignore
+      }
+    });
+
+    // ── Rider live GPS location (every ~5 seconds) ───────────────────────
+    // Updates the Zustand live tracking store directly.
+    // Does NOT trigger any React Query refetch — the map reads from the
+    // store and animates the rider marker smoothly between SSE ticks.
+    es.addEventListener('rider_location_update', (event: CustomEvent<'rider_location_update'>) => {
+      if (!event.data) return;
+      try {
+        const data = JSON.parse(event.data);
+        const orderId = data.order_id;
+        const lat = data.lat;
+        const lng = data.lng;
+        const timestamp = data.timestamp;
+
+        if (orderId && typeof lat === 'number' && typeof lng === 'number') {
+          setRiderLocation(orderId, lat, lng, timestamp ?? Date.now());
+        }
+      } catch {
+        // Malformed payload — ignore
+      }
+    });
+
     // ── Error: reconnect with backoff ─────────────────────────────────────
     es.addEventListener('error', () => {
       if (!isMountedRef.current) return;
@@ -142,7 +197,7 @@ export function useMobileSSE() {
         if (isMountedRef.current) connect();
       }, delay);
     });
-  }, [status, setLastStatusUpdate, setBranchStatusUpdate, queryClient]); // ← queryClient added
+  }, [status, setLastStatusUpdate, setBranchStatusUpdate, queryClient, setRiderLocation]);
 
   // ── Mount / unmount ───────────────────────────────────────────────────────
   useEffect(() => {

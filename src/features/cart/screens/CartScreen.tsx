@@ -1,70 +1,97 @@
 // src/features/cart/screens/CartScreen.tsx (do not remove this comment)
-// src/features/cart/screens/CartScreen.tsx
-
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import Animated, {
-  useSharedValue,
+  Easing,
   useAnimatedStyle,
-  withSpring,
+  useSharedValue,
   withDelay,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Radius } from "../../../theme/radius";
+import { Spacing } from "../../../theme/spacing";
 import { useTheme } from "../../../theme/ThemeContext";
 import { Typography } from "../../../theme/typography";
-import { Spacing } from "../../../theme/spacing";
-import { Radius } from "../../../theme/radius";
 
-import { DeliveryAddressCard } from "../components/DeliveryAddressCard";
-import { DeliverySummaryCard } from "../components/DeliverySummaryCard";
+import { useAuthStore } from "../../../store/authStore";
+import { useCheckoutStore } from "../../../store/checkoutStore";
+import type { CheckoutPatient } from "../../../types/auth";
+import { AddressPickerSheet } from "../components/AddressPickerSheet";
 import { BillDetailsCard } from "../components/BillDetailsCard";
+import { DeliveryAddressCard } from "../components/DeliveryAddressCard";
 import {
   DeliveryInstructionCard,
   INSTRUCTIONS,
 } from "../components/DeliveryInstructionCard";
-import { StickyCheckoutBar } from "../components/StickyCheckoutBar";
-import { RecommendationSection } from "../components/RecommendationSection";
-import { PrescriptionUploadCard } from "../components/PrescriptionUploadCard";
-import { AddressPickerSheet } from "../components/AddressPickerSheet";
-import { PatientSelectorCard } from "../components/PatientSelectorCard";
+import { DeliverySummaryCard } from "../components/DeliverySummaryCard";
 import { PatientPickerSheet } from "../components/PatientPickerSheet";
-import { useCheckoutStore } from "../../../store/checkoutStore";
-import { useAuthStore } from "../../../store/authStore";
-import type { CheckoutPatient } from "../../../types/auth";
+import { PatientSelectorCard } from "../components/PatientSelectorCard";
+import { PrescriptionUploadCard } from "../components/PrescriptionUploadCard";
+import { RecommendationSection } from "../components/RecommendationSection";
+import { StickyCheckoutBar } from "../components/StickyCheckoutBar";
 
-import { useCheckout } from "../hooks/useCheckout";
 import { useDeliveryETA } from "../../../hooks/useDeliveryETA";
+import { useCheckout } from "../hooks/useCheckout";
 
 import { useCartStore } from "../../../store/cartStore";
+import { useDeliveryLocationStore } from "../../../store/deliveryLocationStore";
 import { usePrescriptionStore } from "../../../store/prescriptionStore";
 import { useAddresses } from "../../profile/hooks/useAddresses";
-import { useDeliveryLocationStore } from "../../../store/deliveryLocationStore";
 import type { Address } from "../../profile/types/profile.types";
 
 import { CouponSection } from "../components/CouponSection";
 import { LoyaltyPointsSection } from "../components/LoyaltyPointsSection";
 
-function OrderSuccess({ onGoHome }: { onGoHome: () => void }) {
+interface OrderSuccessProps {
+  orderId: string | null;
+  onNavigateTracking: (orderId: string | null) => void;
+  onGoHome: () => void;
+}
+
+function OrderSuccess({
+  orderId,
+  onNavigateTracking,
+  onGoHome,
+}: OrderSuccessProps) {
   const { colors } = useTheme();
 
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
+  const progressWidth = useSharedValue(0);
 
   useEffect(() => {
+    // 1. Spring in the checkmark icon
     scale.value = withSpring(1, { damping: 12, stiffness: 120 });
-    opacity.value = withDelay(200, withTiming(1, { duration: 400 }));
-  }, []);
+    // 2. Fade in content
+    opacity.value = withDelay(150, withTiming(1, { duration: 350 }));
+    // 3. Smooth progress line over 2.2 seconds
+    progressWidth.value = withDelay(
+      200,
+      withTiming(1, {
+        duration: 2000,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      }),
+    );
+
+    // 4. Trigger auto-navigation to tracking
+    const timer = setTimeout(() => {
+      onNavigateTracking(orderId);
+    }, 2300);
+
+    return () => clearTimeout(timer);
+  }, [orderId, onNavigateTracking, scale, opacity, progressWidth]);
 
   const badgeStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -72,6 +99,10 @@ function OrderSuccess({ onGoHome }: { onGoHome: () => void }) {
 
   const contentStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
+  }));
+
+  const progressStyle = useAnimatedStyle(() => ({
+    width: `${progressWidth.value * 100}%`,
   }));
 
   return (
@@ -87,7 +118,7 @@ function OrderSuccess({ onGoHome }: { onGoHome: () => void }) {
         >
           <Ionicons
             name="checkmark-circle"
-            size={80}
+            size={84}
             color={colors.status.success}
           />
         </View>
@@ -98,17 +129,52 @@ function OrderSuccess({ onGoHome }: { onGoHome: () => void }) {
           Order Placed!
         </Text>
         <Text style={[styles.successSub, { color: colors.text.muted }]}>
-          Your order has been placed with the pharmacy.{"\n"}
-          Track your order status in the Orders tab.
+          Your order has been sent to the pharmacy.{"\n"}
+          Connecting you to live tracking...
         </Text>
-        <TouchableOpacity
-          onPress={onGoHome}
-          activeOpacity={0.85}
-          style={[styles.homeBtn, { backgroundColor: colors.brand.primary }]}
+
+        {/* Transition progress bar */}
+        <View
+          style={[
+            styles.progressBarContainer,
+            {
+              backgroundColor: colors.background.tint,
+              borderColor: colors.border.subtle,
+            },
+          ]}
         >
-          <Ionicons name="home-outline" size={16} color="#fff" />
-          <Text style={styles.homeBtnText}>Back to Home</Text>
-        </TouchableOpacity>
+          <Animated.View
+            style={[
+              styles.progressBarFill,
+              { backgroundColor: colors.brand.primary },
+              progressStyle,
+            ]}
+          />
+        </View>
+
+        <View style={styles.successActions}>
+          <TouchableOpacity
+            onPress={() => onNavigateTracking(orderId)}
+            activeOpacity={0.85}
+            style={[
+              styles.trackNowBtn,
+              { backgroundColor: colors.brand.primary },
+            ]}
+          >
+            <Ionicons name="navigate-outline" size={16} color="#fff" />
+            <Text style={styles.trackNowBtnText}>Track Order Now</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={onGoHome}
+            activeOpacity={0.7}
+            style={styles.homeLink}
+          >
+            <Text style={[styles.homeLinkText, { color: colors.text.muted }]}>
+              Back to Home
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     </View>
   );
@@ -205,6 +271,7 @@ export function CartScreen() {
   }, []);
 
   const [isSuccess, setIsSuccess] = useState(false);
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
 
   const [selectedInstructions, setSelectedInstructions] = useState<string[]>(
     [],
@@ -236,6 +303,14 @@ export function CartScreen() {
     router.replace("/(tabs)/home" as any);
   }, []);
 
+  const handleNavigateTracking = useCallback((orderId: string | null) => {
+    if (orderId) {
+      router.replace(`/orders/${orderId}` as any);
+    } else {
+      router.replace("/(tabs)/orders" as any);
+    }
+  }, []);
+
   const firstItem = items[0] as any;
   const branchLat = firstItem?.branchLatitude ?? null;
   const branchLng = firstItem?.branchLongitude ?? null;
@@ -247,12 +322,16 @@ export function CartScreen() {
 
   const { placeOrder, isQuoteLoading } = useCheckout({
     distanceKm,
-    onSuccess: useCallback(() => {
-      clearCart();
-      clearPrescriptions();
-      setSelectedInstructions([]);
-      setIsSuccess(true);
-    }, [clearCart, clearPrescriptions]),
+    onSuccess: useCallback(
+      (orderId?: string) => {
+        clearCart();
+        clearPrescriptions();
+        setSelectedInstructions([]);
+        if (orderId) setPlacedOrderId(orderId);
+        setIsSuccess(true);
+      },
+      [clearCart, clearPrescriptions],
+    ),
   });
 
   if (isSuccess) {
@@ -261,7 +340,11 @@ export function CartScreen() {
         style={[styles.safe, { backgroundColor: colors.background.page }]}
         edges={["top", "bottom"]}
       >
-        <OrderSuccess onGoHome={handleGoHome} />
+        <OrderSuccess
+          orderId={placedOrderId}
+          onNavigateTracking={handleNavigateTracking}
+          onGoHome={handleGoHome}
+        />
       </SafeAreaView>
     );
   }
@@ -440,18 +523,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 150,
   },
-  seeAllBtn: {
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 16,
-    marginTop: 16,
-  },
-  seeAllText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.35)",
@@ -503,7 +574,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 32,
-    gap: 32,
+    gap: 28,
   },
   successBadge: {
     width: 120,
@@ -515,6 +586,7 @@ const styles = StyleSheet.create({
   successBody: {
     alignItems: "center",
     gap: Spacing.md,
+    width: "100%",
   },
   successTitle: {
     fontSize: 24,
@@ -527,18 +599,44 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
-  homeBtn: {
+  progressBarContainer: {
+    width: 180,
+    height: 4,
+    borderRadius: 2,
+    overflow: "hidden",
+    borderWidth: 0.5,
+    marginVertical: 4,
+  },
+  progressBarFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  successActions: {
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+    width: "100%",
+  },
+  trackNowBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: Spacing.sm,
-    paddingHorizontal: 24,
-    height: 50,
+    paddingHorizontal: 28,
+    height: 48,
     borderRadius: Radius.md,
-    marginTop: Spacing.sm,
+    width: "80%",
   },
-  homeBtnText: {
-    fontSize: 15,
+  trackNowBtnText: {
+    fontSize: 14,
     fontFamily: "Inter_700Bold",
     color: "#ffffff",
+  },
+  homeLink: {
+    paddingVertical: 6,
+  },
+  homeLinkText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
   },
 });

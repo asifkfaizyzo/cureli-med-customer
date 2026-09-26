@@ -51,11 +51,13 @@ export interface ColorPalette {
     successBorder: string;
     warning: string;
     warningBg: string;
+    warningBorder: string;
     error: string;
     errorBg: string;
     errorBorder: string;
     info: string;
     infoBg: string;
+    infoBorder: string;
   };
 
   overlay: {
@@ -161,11 +163,13 @@ export const LightColors: ColorPalette = {
     successBorder: "#bbf7d0",
     warning: "#f59e0b",
     warningBg: "#fffbeb",
+    warningBorder: "#fde68a",
     error: "#ef4444",
     errorBg: "#fef2f2",
     errorBorder: "#fecaca",
     info: "#3b82f6",
     infoBg: "#eff6ff",
+    infoBorder: "#bfdbfe",
   },
 
   overlay: {
@@ -197,11 +201,10 @@ export const LightColors: ColorPalette = {
   },
 
   hero: {
-    // Light mode: rich, saturated dark gradients — white text pops
     gradients: [
-      ["#05015A", "#3b2fd4"],   // deep navy → indigo
-      ["#0a0280", "#6366f1"],   // royal blue → soft purple
-      ["#16044d", "#7c3aed"],   // dark plum → violet
+      ["#05015A", "#3b2fd4"],
+      ["#0a0280", "#6366f1"],
+      ["#16044d", "#7c3aed"],
     ],
     onGradientText: "#ffffff",
     onGradientTextMuted: "rgba(255,255,255,0.80)",
@@ -271,11 +274,13 @@ export const DarkColors: ColorPalette = {
     successBorder: "#166534",
     warning: "#fbbf24",
     warningBg: "#1a1505",
+    warningBorder: "#78350f",
     error: "#f87171",
     errorBg: "#1f0a0a",
     errorBorder: "#7f1d1d",
     info: "#60a5fa",
     infoBg: "#0a1628",
+    infoBorder: "#1e3a8a",
   },
 
   overlay: {
@@ -307,18 +312,11 @@ export const DarkColors: ColorPalette = {
   },
 
   hero: {
-    // Dark mode: lighter, more vibrant gradients so they POP against
-    // the near-black page background. Text is dark for contrast.
     gradients: [
-      ["#6a5dcb", "#7a6cad"],   // purple → lavender
-      ["#5456ca", "#6471a8"],   // indigo → periwinkle
-      ["#6845ba", "#7f72a4"],   // violet → lilac
+      ["#6a5dcb", "#7a6cad"],
+      ["#5456ca", "#6471a8"],
+      ["#6845ba", "#7f72a4"],
     ],
-    // gradients: [
-    //   ["#7c6df0", "#b4a0ff"],   // purple → lavender
-    //   ["#6366f1", "#93a5f8"],   // indigo → periwinkle
-    //   ["#8b5cf6", "#c4b0ff"],   // violet → lilac
-    // ],
     onGradientText: "#ffffff",
     onGradientTextMuted: "rgba(255,255,255,0.80)",
     onGradientTextSubtle: "rgba(255,255,255,0.55)",

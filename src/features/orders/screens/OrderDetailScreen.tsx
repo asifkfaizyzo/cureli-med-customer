@@ -1,5 +1,4 @@
 // src/features/orders/screens/OrderDetailScreen.tsx (do not remove this comment)
-
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -23,6 +22,14 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+} from "react-native-reanimated";
+
 import { useDialog } from "../../../components/Dialog/DialogProvider";
 import { RemoteImage } from "../../../components/RemoteImage";
 import { useOrderNotificationStore } from "../../../store/orderNotificationStore";
@@ -39,9 +46,12 @@ import {
   formatDeliveryDate,
   getRejectionLabel,
   getStatusColorKey,
+  getStatusColors,
   getStatusIcon,
   getStatusLabel,
+  type StatusColorKey,
 } from "../constants/orders.constants";
+import { ActiveTrackingScreen } from "./ActiveTrackingScreen";
 
 const TERMINAL_STATUSES = new Set(["COMPLETED", "CANCELLED", "REJECTED"]);
 const INVOICE_STATUSES = new Set(["READY_FOR_PICKUP", "COMPLETED"]);
@@ -72,6 +82,69 @@ function getRelativeTime(dateString: string): string | null {
   } catch {
     return null;
   }
+}
+
+// ── Branded Smooth Loading Transition ───────────────────────────
+function OrderDetailLoader() {
+  const { colors } = useTheme();
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(0.4);
+
+  useEffect(() => {
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.08, { duration: 900 }),
+        withTiming(1, { duration: 900 }),
+      ),
+      -1,
+    );
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.8, { duration: 900 }),
+        withTiming(0.4, { duration: 900 }),
+      ),
+      -1,
+    );
+  }, [scale, opacity]);
+
+  const animatedGlow = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background.page }]}
+      edges={["top", "bottom"]}
+    >
+      <View style={styles.loaderCenter}>
+        <View style={styles.loaderGlowWrap}>
+          <Animated.View
+            style={[
+              styles.loaderGlow,
+              { backgroundColor: colors.background.tint },
+              animatedGlow,
+            ]}
+          />
+          <View
+            style={[
+              styles.loaderCore,
+              { backgroundColor: colors.background.card, borderColor: colors.border.brand },
+            ]}
+          >
+            <Ionicons name="navigate" size={26} color={colors.brand.primary} />
+          </View>
+        </View>
+
+        <Text style={[styles.loaderTitle, { color: colors.text.primary }]}>
+          Connecting to pharmacy...
+        </Text>
+        <Text style={[styles.loaderSub, { color: colors.text.muted }]}>
+          Preparing live tracking
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
 }
 
 interface ImagePreviewModalProps {
@@ -291,9 +364,9 @@ interface OrderDetailScreenProps {
 }
 
 export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { confirm: confirmDialog, alert: showAlert } = useDialog();
-  const brandColor = isDark ? colors.brand.accent : colors.brand.primary;
+  const brandColor = colors.brand.primary;
 
   const lastStatusUpdate = useOrderNotificationStore((s) => s.lastStatusUpdate);
   const clearLastStatusUpdate = useOrderNotificationStore(
@@ -303,15 +376,11 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
   const [order, setOrder] = useState<MobileOrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [reorderSheetVisible, setReorderSheetVisible] = useState(false);
-  const [reorderData, setReorderData] = useState<ReorderItemsResponse | null>(
-    null,
-  );
+  const [reorderData, setReorderData] = useState<ReorderItemsResponse | null>(null);
   const [reorderLoading, setReorderLoading] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
 
-  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null,
-  );
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchDetail = useCallback(async () => {
     try {
@@ -462,32 +531,18 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
       billDeliveryFee != null ||
       billKmSurcharge != null;
     if (hasBreakdown) return null;
-    const knownTotal =
-      safeNum(order?.grand_total) ?? safeNum(order?.total_amount);
+    const knownTotal = safeNum(order?.grand_total) ?? safeNum(order?.total_amount);
     if (knownTotal == null) return null;
     const gap = knownTotal - billSubtotal;
     return gap > 0.01 ? gap : null;
-  }, [
-    order,
-    billSubtotal,
-    billServiceCharge,
-    billDeliveryFee,
-    billKmSurcharge,
-  ]);
+  }, [order, billSubtotal, billServiceCharge, billDeliveryFee, billKmSurcharge]);
 
+  // ── 1. Branded Loading State (No Flash) ────────────────────────
   if (isLoading) {
-    return (
-      <SafeAreaView
-        style={[styles.safe, { backgroundColor: colors.background.page }]}
-        edges={["top", "bottom"]}
-      >
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={brandColor} />
-        </View>
-      </SafeAreaView>
-    );
+    return <OrderDetailLoader />;
   }
 
+  // ── 2. Error Fallback ──────────────────────────────────────────
   if (!order) {
     return (
       <SafeAreaView
@@ -504,9 +559,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
             Order not found
           </Text>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text
-              style={{ color: brandColor, fontFamily: "Inter_600SemiBold" }}
-            >
+            <Text style={{ color: brandColor, fontFamily: "Inter_600SemiBold" }}>
               Go back
             </Text>
           </TouchableOpacity>
@@ -515,34 +568,25 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     );
   }
 
-  // ── NEW: Dynamic Refund Status Override ────────────────────
+  // ── 3. Smart Switchboard: Active orders → Live Tracking View ───
+  const isOrderActive = !TERMINAL_STATUSES.has(order.status);
+  if (isOrderActive) {
+    return <ActiveTrackingScreen order={order} onBack={() => router.back()} />;
+  }
+
+  // ── 4. Terminal Orders View (COMPLETED / CANCELLED / REJECTED) ──
   const isRefunded =
     order.status === "CANCELLED" && order.payment_status === "REFUNDED";
 
-  const colorKey = isRefunded ? "success" : getStatusColorKey(order.status);
+  const colorKey: StatusColorKey = isRefunded
+    ? "success"
+    : getStatusColorKey(order.status);
   const statusIcon = (
     isRefunded ? "refresh-circle-outline" : getStatusIcon(order.status)
   ) as any;
   const statusLabel = isRefunded ? "Refunded" : getStatusLabel(order.status);
 
-  const statusFg =
-    colorKey === "success"
-      ? colors.status.success
-      : colorKey === "error"
-        ? colors.status.error
-        : colorKey === "warning"
-          ? colors.status.warning
-          : colors.brand.primary;
-
-  const statusBg =
-    colorKey === "success"
-      ? colors.status.successBg
-      : colorKey === "error"
-        ? colors.status.errorBg
-        : colorKey === "warning"
-          ? colors.status.warningBg
-          : colors.background.tint;
-  // ──────────────────────────────────────────────────────────
+  const { fg: statusFg, bg: statusBg } = getStatusColors(colorKey, colors);
 
   const addr = order.delivery_address;
   const addressLine = addr
@@ -571,14 +615,13 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
       value: order.branch_name ?? "—",
     },
     { icon: "location-outline", label: "Delivery Address", value: addressLine },
-        {
+    {
       icon: "wallet-outline",
       label: "Payment",
       value: (() => {
         const method = order.payment_method ?? "COD";
         const status = order.payment_status;
 
-        // Parse Razorpay mode into friendly label
         let methodLabel = method;
         if (method.startsWith("RAZORPAY_")) {
           const mode = method.replace("RAZORPAY_", "");
@@ -596,10 +639,10 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
           methodLabel = "Cash on Delivery";
         }
 
-        // Only show status badge if it adds useful info
         if (status === "PAID") return `${methodLabel} · Paid`;
         if (status === "REFUNDED") return `${methodLabel} · Refunded`;
-        if (status === "PARTIALLY_REFUNDED") return `${methodLabel} · Partially Refunded`;
+        if (status === "PARTIALLY_REFUNDED")
+          return `${methodLabel} · Partially Refunded`;
         if (status === "FAILED") return `${methodLabel} · Failed`;
         if (status === "PENDING") return `${methodLabel} · Pending`;
         return methodLabel;
@@ -723,9 +766,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
           </View>
 
           {order.items.map((item, index) => {
-            // ── NEW: MRP discount strike-through calculation ───────
             const showMrpDiscount = item.mrp > item.unit_price;
-            // ────────────────────────────────────────────────────────
 
             return (
               <View key={item.item_id}>
@@ -778,7 +819,6 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
                       </Text>
                     )}
 
-                    {/* Item Unit Prices & Discount calculations */}
                     <View style={styles.priceContainer}>
                       <Text
                         style={[
@@ -918,11 +958,18 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
                 { borderTopColor: colors.border.default },
               ]}
             >
-              <PriceRow
-                label="Grand Total"
-                value={formatCurrency(billGrandTotal)}
-                isTotal
-              />
+              <View
+                style={[
+                  styles.totalRow,
+                  { backgroundColor: colors.background.tint },
+                ]}
+              >
+                <PriceRow
+                  label="Grand Total"
+                  value={formatCurrency(billGrandTotal)}
+                  isTotal
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -980,26 +1027,22 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
           ))}
         </View>
 
-                {/* ── Unified Timeline (Order Status + Payment Milestones) ── */}
+        {/* Unified Timeline */}
         {(() => {
-          // Build a unified timeline by merging order status history
-          // with synthesized payment milestones.
-
           interface TimelineEntry {
             id: string;
             label: string;
             icon: React.ComponentProps<typeof Ionicons>["name"];
-            colorKey: "success" | "error" | "warning" | "primary";
+            colorKey: StatusColorKey;
             date: string;
             actor: string | null;
             reason: string | null;
             isCurrent: boolean;
-            sortKey: number; // timestamp for sorting
+            sortKey: number;
           }
 
           const entries: TimelineEntry[] = [];
 
-          // 1. Synthesize "Payment Confirmed" milestone for paid orders
           if (
             order.payment_status === "PAID" &&
             order.payment_method !== "COD"
@@ -1017,16 +1060,12 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
             });
           }
 
-          // 2. Add all order status history entries
           order.status_history.forEach((entry, index) => {
-            // Skip duplicate payment-status-only entries from cadmin
-            // (where from_status === to_status and reason contains "payment_status:")
             const isPaymentOnlyEntry =
               entry.from_status === entry.to_status &&
               entry.reason?.startsWith("payment_status:");
 
             if (isPaymentOnlyEntry) {
-              // Parse the payment status change from the reason string
               const match = entry.reason?.match(
                 /payment_status:\s*(\w+)\s*→\s*(\w+)/,
               );
@@ -1048,27 +1087,20 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
                       : newPaymentStatus === "PARTIALLY_REFUNDED"
                         ? "Partially Refunded"
                         : `Payment ${newPaymentStatus}`,
-                  icon: isRefund
-                    ? "refresh-circle"
-                    : "card-outline",
+                  icon: isRefund ? "refresh-circle" : "card-outline",
                   colorKey: isRefund ? "success" : "warning",
                   date: entry.created_at,
                   actor: "Admin",
-                  reason: entry.reason
-                    ?.split("|")
-                    .slice(1)
-                    .join("|")
-                    .trim() || null,
+                  reason:
+                    entry.reason?.split("|").slice(1).join("|").trim() || null,
                   isCurrent: isLatest && isRefunded,
                   sortKey: new Date(entry.created_at).getTime(),
                 });
               }
-              return; // Don't add the duplicate order status entry
+              return;
             }
 
-            // Normal order status entry
-            const isLatest =
-              index === order.status_history.length - 1;
+            const isLatest = index === order.status_history.length - 1;
             const isCurrentStepRefund =
               isLatest && isRefunded && entry.to_status === "CANCELLED";
 
@@ -1082,7 +1114,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
                 : (getStatusIcon(entry.to_status) as any),
               colorKey: isCurrentStepRefund
                 ? "success"
-                : (getStatusColorKey(entry.to_status) as any),
+                : getStatusColorKey(entry.to_status),
               date: entry.created_at,
               actor:
                 entry.changed_by_type === "customer"
@@ -1098,10 +1130,8 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
             });
           });
 
-          // 3. Sort chronologically
           entries.sort((a, b) => a.sortKey - b.sortKey);
 
-          // Mark the actual last entry as current
           if (entries.length > 0) {
             entries.forEach((e) => (e.isCurrent = false));
             entries[entries.length - 1].isCurrent = true;
@@ -1134,26 +1164,26 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
                 const isLatest = entry.isCurrent;
                 const isPast = !isLatest;
 
-                const stepColor =
-                  entry.colorKey === "success"
-                    ? colors.status.success
-                    : entry.colorKey === "error"
-                      ? colors.status.error
-                      : entry.colorKey === "warning"
-                        ? colors.status.warning
-                        : colors.brand.primary;
-                const stepBg =
-                  entry.colorKey === "success"
-                    ? colors.status.successBg
-                    : entry.colorKey === "error"
-                      ? colors.status.errorBg
-                      : entry.colorKey === "warning"
-                        ? colors.status.warningBg
-                        : colors.background.tint;
+                const { fg: stepColor, bg: stepBg } = getStatusColors(
+                  entry.colorKey,
+                  colors,
+                );
                 const elapsed = getRelativeTime(entry.date);
 
                 return (
-                  <View key={entry.id} style={styles.timelineRow}>
+                  <View
+                    key={entry.id}
+                    style={[
+                      styles.timelineRow,
+                      isLatest && {
+                        backgroundColor: stepBg,
+                        borderRadius: 12,
+                        marginHorizontal: -8,
+                        paddingHorizontal: 8,
+                        paddingVertical: 6,
+                      },
+                    ]}
+                  >
                     <View style={styles.timelineIconCol}>
                       <View
                         style={[
@@ -1206,9 +1236,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
                           style={[
                             styles.timelineStatus,
                             {
-                              color: isLatest
-                                ? stepColor
-                                : colors.text.primary,
+                              color: isLatest ? stepColor : colors.text.primary,
                               fontFamily: isLatest
                                 ? "Inter_700Bold"
                                 : "Inter_600SemiBold",
@@ -1221,7 +1249,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
                           <View
                             style={[
                               styles.timelineLatestBadge,
-                              { backgroundColor: stepBg },
+                              { backgroundColor: colors.background.card },
                             ]}
                           >
                             <Text
@@ -1343,36 +1371,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
           </TouchableOpacity>
         )}
 
-        {order.status === "PLACED" ? (
-          <>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                { backgroundColor: colors.status.error },
-              ]}
-              onPress={handleCancel}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="close-circle-outline" size={18} color="#ffffff" />
-              <Text
-                style={[
-                  styles.actionButtonText,
-                  { fontFamily: "Inter_700Bold" },
-                ]}
-              >
-                Cancel Order
-              </Text>
-            </TouchableOpacity>
-            <Text
-              style={[
-                styles.actionNote,
-                { color: colors.text.faint, fontFamily: "Inter_400Regular" },
-              ]}
-            >
-              You can only cancel before the pharmacy accepts
-            </Text>
-          </>
-        ) : order.status === "COMPLETED" || isRefunded ? (
+        {order.status === "COMPLETED" || isRefunded ? (
           <>
             <TouchableOpacity
               style={[
@@ -1436,17 +1435,52 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
             </TouchableOpacity>
           </>
         ) : (
-          <View style={styles.statusInfoBar}>
-            <Ionicons name={statusIcon} size={16} color={statusFg} />
-            <Text
+          <>
+            <View style={styles.statusInfoBar}>
+              <Ionicons name={statusIcon} size={16} color={statusFg} />
+              <Text
+                style={[
+                  styles.statusInfoText,
+                  { color: statusFg, fontFamily: "Inter_500Medium" },
+                ]}
+              >
+                {statusLabel}
+              </Text>
+            </View>
+            <TouchableOpacity
               style={[
-                styles.statusInfoText,
-                { color: statusFg, fontFamily: "Inter_500Medium" },
+                styles.invoiceButton,
+                { borderColor: colors.border.default },
               ]}
+              onPress={() =>
+                router.push({
+                  pathname: "/support/raise" as any,
+                  params: {
+                    orderId: order.order_id,
+                    orderNumber: order.order_number,
+                  },
+                })
+              }
+              activeOpacity={0.7}
             >
-              {statusLabel}
-            </Text>
-          </View>
+              <Ionicons
+                name="help-circle-outline"
+                size={16}
+                color={colors.text.secondary}
+              />
+              <Text
+                style={[
+                  styles.invoiceButtonText,
+                  {
+                    color: colors.text.secondary,
+                    fontFamily: "Inter_600SemiBold",
+                  },
+                ]}
+              >
+                Need help with this order?
+              </Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
@@ -1477,6 +1511,41 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 12,
   },
+  loaderCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  loaderGlowWrap: {
+    width: 68,
+    height: 68,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  loaderGlow: {
+    position: "absolute",
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+  },
+  loaderCore: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loaderTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+  },
+  loaderSub: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+  },
   notFoundText: { fontSize: 16 },
   header: {
     flexDirection: "row",
@@ -1497,7 +1566,17 @@ const styles = StyleSheet.create({
   headerRight: { width: 36 },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, gap: 12 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 12 },
+  card: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
   cardTitle: { fontSize: 15, marginBottom: 4 },
   summaryHeader: { gap: 6 },
   statusBadge: {
@@ -1559,7 +1638,13 @@ const styles = StyleSheet.create({
   expiredLabel: { fontSize: 11 },
   prescriptionExpiredNote: { fontSize: 11, lineHeight: 16, marginTop: 4 },
   priceRows: { gap: 2 },
-  totalDivider: { borderTopWidth: 1, marginTop: 6 },
+  totalDivider: { borderTopWidth: 1, marginTop: 6, paddingTop: 10 },
+  totalRow: {
+    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
   metaRow: {
     flexDirection: "row",
     alignItems: "flex-start",

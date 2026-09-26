@@ -4,8 +4,11 @@
 //   - READY_FOR_PICKUP label: 'Out for Delivery' (correct for delivery model)
 //   - READY_FOR_PICKUP icon: 'bicycle-outline' (kept — appropriate for delivery)
 //   - Added REJECTION_REASON_LABELS map and getRejectionLabel helper
+//   - Added getStatusColors: centralizes the colorKey → { fg, bg, border }
+//     theme-token mapping so screens don't duplicate this ternary chain.
 
 import type { MarketplaceOrderStatus } from '../../../types/order';
+import type { ColorPalette } from '../../../theme/colors';
 
 // ── Status display label ──────────────────────────────────────────────────────
 // These are customer-facing labels. Internal DB enum stays READY_FOR_PICKUP.
@@ -54,6 +57,52 @@ const STATUS_ICON: Record<MarketplaceOrderStatus, string> = {
 
 export function getStatusIcon(status: MarketplaceOrderStatus): string {
   return STATUS_ICON[status] ?? 'help-circle-outline';
+}
+
+// ── Resolved status colors (fg / bg / border) for badges & timelines ──────────
+// Centralizes the semantic-color → theme-token mapping so screens don't
+// duplicate this ternary chain in multiple places. 'info' intentionally
+// resolves to the brand color (not colors.status.info) since PLACED is
+// treated as the "default/brand" state rather than a generic informational
+// blue — this matches the original OrderDetailScreen design intent.
+
+export interface ResolvedStatusColors {
+  fg: string;
+  bg: string;
+  border: string;
+}
+
+export function getStatusColors(
+  colorKey: StatusColorKey,
+  colors: ColorPalette,
+): ResolvedStatusColors {
+  switch (colorKey) {
+    case 'success':
+      return {
+        fg: colors.status.success,
+        bg: colors.status.successBg,
+        border: colors.status.successBorder,
+      };
+    case 'error':
+      return {
+        fg: colors.status.error,
+        bg: colors.status.errorBg,
+        border: colors.status.errorBorder,
+      };
+    case 'warning':
+      return {
+        fg: colors.status.warning,
+        bg: colors.status.warningBg,
+        border: colors.status.warningBorder,
+      };
+    case 'info':
+    default:
+      return {
+        fg: colors.brand.primary,
+        bg: colors.background.tint,
+        border: colors.border.brand,
+      };
+  }
 }
 
 // ── Rejection reason labels ───────────────────────────────────────────────────

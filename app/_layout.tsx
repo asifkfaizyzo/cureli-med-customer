@@ -253,7 +253,7 @@ export default function RootLayout() {
               </Stack>
 
               <GlobalCartBar />
-              {/* <GlobalOrderBar /> */}
+              <GlobalOrderBar />
             </DialogProvider>
           </BottomSheetModalProvider>
         </QueryClientProvider>
