@@ -98,9 +98,6 @@ export function useRotatingMessage(order: MobileOrderDetail): RotatingMessageRes
       } else if (ds === 'ARRIVED_AT_PHARMACY') {
         line2 = 'Rider is at the pharmacy';
         subtitles = ['Collecting your order now', 'Handoff in progress'];
-      } else if (ds === 'PHARMACY_CONFIRMED') {
-        line2 = 'Rider is collecting your package';
-        subtitles = ['Almost ready to head your way', 'Final checks at the pharmacy'];
       }
     }
 

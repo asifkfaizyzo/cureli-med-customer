@@ -100,7 +100,6 @@ function getActiveLeg(
       "RIDER_NOTIFIED",
       "ACCEPTED",
       "ARRIVED_AT_PHARMACY",
-      "PHARMACY_CONFIRMED",
     ].includes(deliveryStatus)
   )
     return "leg1";

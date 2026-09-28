@@ -195,7 +195,6 @@ export type DeliveryStatus =
   | "RIDER_NOTIFIED"
   | "ACCEPTED"
   | "ARRIVED_AT_PHARMACY"
-  | "PHARMACY_CONFIRMED"
   | "PICKED_UP"
   | "EN_ROUTE"
   | "ARRIVED_AT_CUSTOMER"

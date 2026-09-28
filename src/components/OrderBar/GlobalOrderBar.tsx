@@ -370,21 +370,7 @@ export function GlobalOrderBar() {
           isFailed: false,
         };
       }
-      if (dStatus === "PHARMACY_CONFIRMED") {
-        return {
-          text: "Rider is collecting your package",
-          icon: "cube-outline" as const,
-          gradient: [colors.brand.soft, colors.brand.accent] as [
-            string,
-            string,
-          ],
-          progress: 3,
-          statusBadge: "Collecting",
-          isTerminal: false,
-          isDelivered: false,
-          isFailed: false,
-        };
-      }
+      
       return {
         text: "Order packed & ready for pickup",
         icon: "cube-outline" as const,
