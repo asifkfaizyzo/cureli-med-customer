@@ -218,14 +218,19 @@ export function useMobileSSE() {
   }, [status, connect, disconnect]);
 
   // ── AppState: background ↔ foreground ────────────────────────────────────
-  useEffect(() => {
+useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
+      console.log(`📱 [Mobile SSE AppState] State transition detected: ${nextState}`);
+      
       if (nextState === 'active') {
         if (status === 'authenticated' && !esRef.current) {
+          console.log("🔌 [Mobile SSE AppState] App active. Re-establishing connection...");
           backoffRef.current = INITIAL_BACKOFF_MS;
           connect();
         }
-      } else if (nextState === 'background' || nextState === 'inactive') {
+      } else if (nextState === 'background') {
+        // Ignored 'inactive' (transient drop overlay / lock screen triggers)
+        console.log("🔌 [Mobile SSE AppState] App suspended to background. Closing stream connection.");
         disconnect();
       }
     };

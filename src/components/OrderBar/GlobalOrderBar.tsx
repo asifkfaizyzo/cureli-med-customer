@@ -1,44 +1,44 @@
 // src/components/OrderBar/GlobalOrderBar.tsx (do not remove this comment)
-import React, { useCallback, useMemo, useEffect, useState, useRef } from "react";
-import {
-  Text,
-  View,
-  StyleSheet,
-  Pressable,
-  Dimensions,
-  PanResponder,
-  GestureResponderEvent,
-  PanResponderGestureState,
-  TouchableOpacity,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
+import { router, usePathname } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  Dimensions,
+  GestureResponderEvent,
+  PanResponder,
+  PanResponderGestureState,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withRepeat,
-  withTiming,
-  withSequence,
   FadeInDown,
   FadeInRight,
   FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useTheme } from "../../theme/ThemeContext";
-import { Typography } from "../../theme/typography";
-import { Spacing } from "../../theme/spacing";
-import { Radius } from "../../theme/radius";
-import { useLayoutStore } from "../../store/layoutStore";
+import { ordersApi } from "../../features/marketplace/api/orders.api";
 import { useCartBarVisibility } from "../../hooks/useCartBarVisibility";
 import { useIsBottomTabRoute } from "../../hooks/useIsBottomTabRoute";
+import { useLayoutStore } from "../../store/layoutStore";
 import { useOrderNotificationStore } from "../../store/orderNotificationStore";
-import { ordersApi } from "../../features/marketplace/api/orders.api";
-import type { MobileOrderSummary, DeliveryStatus } from "../../types/order";
+import { Radius } from "../../theme/radius";
+import { Spacing } from "../../theme/spacing";
+import { useTheme } from "../../theme/ThemeContext";
+import { Typography } from "../../theme/typography";
+import type { DeliveryStatus, MobileOrderSummary } from "../../types/order";
 
 const BAR_HEIGHT = 64;
 const FAB_SIZE = 52;
@@ -48,20 +48,15 @@ const DISMISS_THRESHOLD_DY = 120; // Drag down 120px to dismiss
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-interface StatusStyle {
-  text: string;
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  gradient: [string, string];
-  progress: number;
-  statusBadge: string;
-  isTerminal: boolean;
-  isDelivered: boolean;
-  isFailed: boolean;
-}
-
 function shouldHideOrderBar(pathname: string): boolean {
-  if (pathname === "/" || pathname === "/intro" || pathname === "/splash") return true;
-  if (pathname.startsWith("/(auth)") || pathname === "/login" || pathname === "/otp") return true;
+  if (pathname === "/" || pathname === "/intro" || pathname === "/splash")
+    return true;
+  if (
+    pathname.startsWith("/(auth)") ||
+    pathname === "/login" ||
+    pathname === "/otp"
+  )
+    return true;
   if (pathname.startsWith("/onboarding")) return true;
   if (pathname.startsWith("/checkout")) return true;
   if (pathname.startsWith("/orders")) return true;
@@ -77,9 +72,13 @@ export function GlobalOrderBar() {
 
   const { isVisible: isCartBarVisible } = useCartBarVisibility();
   const bottomTabBarHeight = useLayoutStore((s) => s.bottomTabBarHeight);
-  const lastStatusUpdate = useOrderNotificationStore((s) => s.lastStatusUpdate);
 
-  const [dismissedOrderIds, setDismissedOrderIds] = useState<Record<string, boolean>>({});
+  // Zustand store properties for active state and persistence
+  const lastStatusUpdate = useOrderNotificationStore((s) => s.lastStatusUpdate);
+  const dismissedOrderIds = useOrderNotificationStore(
+    (s) => s.dismissedOrderIds,
+  );
+  const dismissOrder = useOrderNotificationStore((s) => s.dismissOrder);
 
   // Heartbeat breathing shared values (replaces standard spinners)
   const pulseScale = useSharedValue(1);
@@ -115,7 +114,8 @@ export function GlobalOrderBar() {
       if (dismissedOrderIds[order.order_id]) return false;
 
       // 1. Show active orders in checkout lifecycle
-      if (["PLACED", "ACCEPTED", "READY_FOR_PICKUP"].includes(order.status)) return true;
+      if (["PLACED", "ACCEPTED", "READY_FOR_PICKUP"].includes(order.status))
+        return true;
 
       // 2. Track completed orders if their delivery remains active
       if (
@@ -128,7 +128,8 @@ export function GlobalOrderBar() {
 
       // 3. Show terminated states temporarily until manual dismissal
       if (["CANCELLED", "REJECTED"].includes(order.status)) return true;
-      if (order.status === "COMPLETED" && order.delivery_status === "DELIVERED") return true;
+      if (order.status === "COMPLETED" && order.delivery_status === "DELIVERED")
+        return true;
 
       return false;
     });
@@ -140,19 +141,28 @@ export function GlobalOrderBar() {
   useEffect(() => {
     if (activeOrder) {
       pulseScale.value = withRepeat(
-        withSequence(withTiming(1.35, { duration: 1600 }), withTiming(1, { duration: 0 })),
+        withSequence(
+          withTiming(1.35, { duration: 1600 }),
+          withTiming(1, { duration: 0 }),
+        ),
         -1,
-        false
+        false,
       );
       pulseOpacity.value = withRepeat(
-        withSequence(withTiming(0, { duration: 1600 }), withTiming(0.4, { duration: 0 })),
+        withSequence(
+          withTiming(0, { duration: 1600 }),
+          withTiming(0.4, { duration: 0 }),
+        ),
         -1,
-        false
+        false,
       );
       iconBreathe.value = withRepeat(
-        withSequence(withTiming(1.15, { duration: 800 }), withTiming(1, { duration: 800 })),
+        withSequence(
+          withTiming(1.15, { duration: 800 }),
+          withTiming(1, { duration: 800 }),
+        ),
         -1,
-        true
+        true,
       );
     }
   }, [activeOrder, pulseScale, pulseOpacity, iconBreathe]);
@@ -160,27 +170,36 @@ export function GlobalOrderBar() {
   const handleDismiss = useCallback(() => {
     if (activeOrder) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setDismissedOrderIds((prev) => ({ ...prev, [activeOrder.order_id]: true }));
+      dismissOrder(activeOrder.order_id);
     }
-  }, [activeOrder]);
+  }, [activeOrder, dismissOrder]);
 
   // Native elastic drag and pull-down dismissal listener
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (e: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+      onPanResponderMove: (
+        e: GestureResponderEvent,
+        gestureState: PanResponderGestureState,
+      ) => {
         dragX.value = gestureState.moveX - FAB_SIZE / 2;
         dragY.value = gestureState.moveY - FAB_SIZE / 2;
 
         if (gestureState.dy > 0) {
-          const shrinkFactor = Math.max(0.4, 1 - gestureState.dy / (DISMISS_THRESHOLD_DY * 1.6));
+          const shrinkFactor = Math.max(
+            0.4,
+            1 - gestureState.dy / (DISMISS_THRESHOLD_DY * 1.6),
+          );
           dragScale.value = shrinkFactor;
         } else {
           dragScale.value = 1;
         }
       },
-      onPanResponderRelease: (e: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+      onPanResponderRelease: (
+        e: GestureResponderEvent,
+        gestureState: PanResponderGestureState,
+      ) => {
         if (gestureState.dy > DISMISS_THRESHOLD_DY) {
           dragY.value = withTiming(SCREEN_HEIGHT + 100, { duration: 250 });
           dragScale.value = withTiming(0, { duration: 200 });
@@ -194,16 +213,20 @@ export function GlobalOrderBar() {
 
         const snapLeft = 16;
         const snapRight = SCREEN_WIDTH - FAB_SIZE - 16;
-        const closestX = gestureState.moveX < SCREEN_WIDTH / 2 ? snapLeft : snapRight;
+        const closestX =
+          gestureState.moveX < SCREEN_WIDTH / 2 ? snapLeft : snapRight;
 
         const topBound = insets.top + 20;
         const bottomBound = SCREEN_HEIGHT - insets.bottom - 120;
-        const boundedY = Math.max(topBound, Math.min(gestureState.moveY - FAB_SIZE / 2, bottomBound));
+        const boundedY = Math.max(
+          topBound,
+          Math.min(gestureState.moveY - FAB_SIZE / 2, bottomBound),
+        );
 
         dragX.value = withSpring(closestX, { damping: 15 });
         dragY.value = withSpring(boundedY, { damping: 15 });
       },
-    })
+    }),
   ).current;
 
   const handlePress = useCallback(() => {
@@ -236,7 +259,8 @@ export function GlobalOrderBar() {
   // Brand Progression Palette Map (Deep brands → energetic light midbrands)
   const statusConfig = (() => {
     const oStatus = activeOrder.status;
-    const dStatus: DeliveryStatus | undefined | null = activeOrder.delivery_status;
+    const dStatus: DeliveryStatus | undefined | null =
+      activeOrder.delivery_status;
 
     // Terminal states mappings
     if (oStatus === "CANCELLED") {
@@ -293,7 +317,10 @@ export function GlobalOrderBar() {
       return {
         text: "Waiting for store confirmation",
         icon: "time-outline" as const,
-        gradient: [colors.brand.primary, colors.brand.secondary] as [string, string],
+        gradient: [colors.brand.primary, colors.brand.secondary] as [
+          string,
+          string,
+        ],
         progress: 1,
         statusBadge: "Placed",
         isTerminal: false,
@@ -318,7 +345,10 @@ export function GlobalOrderBar() {
       return {
         text: "Pharmacy is packing your order",
         icon: "medical-outline" as const,
-        gradient: [colors.brand.secondary, colors.brand.mid] as [string, string],
+        gradient: [colors.brand.secondary, colors.brand.mid] as [
+          string,
+          string,
+        ],
         progress: 2,
         statusBadge: "Preparing",
         isTerminal: false,
@@ -344,7 +374,10 @@ export function GlobalOrderBar() {
         return {
           text: "Rider is collecting your package",
           icon: "cube-outline" as const,
-          gradient: [colors.brand.soft, colors.brand.accent] as [string, string],
+          gradient: [colors.brand.soft, colors.brand.accent] as [
+            string,
+            string,
+          ],
           progress: 3,
           statusBadge: "Collecting",
           isTerminal: false,
@@ -369,7 +402,10 @@ export function GlobalOrderBar() {
         return {
           text: "Rider is heading to you",
           icon: "navigate-outline" as const,
-          gradient: [colors.brand.accent, colors.brand.light] as [string, string],
+          gradient: [colors.brand.accent, colors.brand.light] as [
+            string,
+            string,
+          ],
           progress: 4,
           statusBadge: "In Transit",
           isTerminal: false,
@@ -381,7 +417,10 @@ export function GlobalOrderBar() {
         return {
           text: "Rider is at your door!",
           icon: "location-outline" as const,
-          gradient: [colors.brand.soft, colors.brand.accent] as [string, string],
+          gradient: [colors.brand.soft, colors.brand.accent] as [
+            string,
+            string,
+          ],
           progress: 4.5,
           statusBadge: "At Door",
           isTerminal: false,
@@ -406,7 +445,9 @@ export function GlobalOrderBar() {
   // ── Mode A: Docked Full-width Bar on Home Page ──────────────
   if (isHomePage) {
     const effectiveTabHeight =
-      bottomTabBarHeight > 0 ? bottomTabBarHeight : DEFAULT_BOTTOM_TAB_BAR_HEIGHT;
+      bottomTabBarHeight > 0
+        ? bottomTabBarHeight
+        : DEFAULT_BOTTOM_TAB_BAR_HEIGHT;
 
     const baseBottomOffset = isBottomTabRoute
       ? effectiveTabHeight + GLOBAL_BAR_BOTTOM_OFFSET
@@ -452,16 +493,24 @@ export function GlobalOrderBar() {
               <Animated.View style={[styles.pulseRing, pulseAnimatedStyle]} />
               <View style={styles.iconCircle}>
                 <Animated.View style={iconAnimatedStyle}>
-                  <Ionicons name={statusConfig.icon} size={18} color="#FFFFFF" />
+                  <Ionicons
+                    name={statusConfig.icon}
+                    size={18}
+                    color="#FFFFFF"
+                  />
                 </Animated.View>
               </View>
             </View>
 
             <View style={styles.middleContainer}>
               <View style={styles.metaRow}>
-                <Text style={styles.orderNumberText}>Order #{activeOrder.order_number}</Text>
+                <Text style={styles.orderNumberText}>
+                  Order #{activeOrder.order_number}
+                </Text>
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{statusConfig.statusBadge}</Text>
+                  <Text style={styles.badgeText}>
+                    {statusConfig.statusBadge}
+                  </Text>
                 </View>
               </View>
               <Text style={styles.statusDescription} numberOfLines={1}>
@@ -473,7 +522,10 @@ export function GlobalOrderBar() {
               {showHomeDismiss ? (
                 // Home dismiss action available ONLY on completed, cancelled, or rejected states
                 <TouchableOpacity
-                  style={[styles.dismissBtn, { backgroundColor: colors.overlay.medium }]}
+                  style={[
+                    styles.dismissBtn,
+                    { backgroundColor: colors.overlay.medium },
+                  ]}
                   onPress={handleDismiss}
                   activeOpacity={0.7}
                 >
@@ -485,49 +537,67 @@ export function GlobalOrderBar() {
                   <View
                     style={[
                       styles.progressDot,
-                      statusConfig.progress >= 1 ? styles.dotActive : styles.dotInactive,
+                      statusConfig.progress >= 1
+                        ? styles.dotActive
+                        : styles.dotInactive,
                     ]}
                   />
                   <View
                     style={[
                       styles.progressLine,
-                      statusConfig.progress >= 2 ? styles.lineActive : styles.lineInactive,
+                      statusConfig.progress >= 2
+                        ? styles.lineActive
+                        : styles.lineInactive,
                     ]}
                   />
                   <View
                     style={[
                       styles.progressDot,
-                      statusConfig.progress >= 2 ? styles.dotActive : styles.dotInactive,
+                      statusConfig.progress >= 2
+                        ? styles.dotActive
+                        : styles.dotInactive,
                     ]}
                   />
                   <View
                     style={[
                       styles.progressLine,
-                      statusConfig.progress >= 3 ? styles.lineActive : styles.lineInactive,
+                      statusConfig.progress >= 3
+                        ? styles.lineActive
+                        : styles.lineInactive,
                     ]}
                   />
                   <View
                     style={[
                       styles.progressDot,
-                      statusConfig.progress >= 3 ? styles.dotActive : styles.dotInactive,
+                      statusConfig.progress >= 3
+                        ? styles.dotActive
+                        : styles.dotInactive,
                     ]}
                   />
                   <View
                     style={[
                       styles.progressLine,
-                      statusConfig.progress >= 4 ? styles.lineActive : styles.lineInactive,
+                      statusConfig.progress >= 4
+                        ? styles.lineActive
+                        : styles.lineInactive,
                     ]}
                   />
                   <View
                     style={[
                       styles.progressDot,
-                      statusConfig.progress >= 4 ? styles.dotActive : styles.dotInactive,
+                      statusConfig.progress >= 4
+                        ? styles.dotActive
+                        : styles.dotInactive,
                     ]}
                   />
                 </View>
               )}
               {!showHomeDismiss && (
-                <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.7)" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color="rgba(255, 255, 255, 0.7)"
+                />
               )}
             </View>
           </LinearGradient>
