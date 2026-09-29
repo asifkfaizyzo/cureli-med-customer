@@ -22,6 +22,7 @@ import Animated, {
   FadeOut,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withSpring,
@@ -44,7 +45,13 @@ const BAR_HEIGHT = 64;
 const FAB_SIZE = 52;
 const DEFAULT_BOTTOM_TAB_BAR_HEIGHT = 49;
 const GLOBAL_BAR_BOTTOM_OFFSET = 12;
-const DISMISS_THRESHOLD_DY = 120; // Drag down 120px to dismiss
+const DISMISS_THRESHOLD_DY = 120;
+
+// ── Ring geometry ────────────────────────────────────────────
+const RING_SIZE = FAB_SIZE + 12;
+const RING_HALF = RING_SIZE / 2;
+const RING_BORDER = 2.5;
+const RING_OFFSET = (RING_SIZE - FAB_SIZE) / 2;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -73,14 +80,13 @@ export function GlobalOrderBar() {
   const { isVisible: isCartBarVisible } = useCartBarVisibility();
   const bottomTabBarHeight = useLayoutStore((s) => s.bottomTabBarHeight);
 
-  // Zustand store properties for active state and persistence
   const lastStatusUpdate = useOrderNotificationStore((s) => s.lastStatusUpdate);
   const dismissedOrderIds = useOrderNotificationStore(
     (s) => s.dismissedOrderIds,
   );
   const dismissOrder = useOrderNotificationStore((s) => s.dismissOrder);
 
-  // Heartbeat breathing shared values (replaces standard spinners)
+  // Heartbeat breathing shared values
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.4);
   const iconBreathe = useSharedValue(1);
@@ -89,6 +95,13 @@ export function GlobalOrderBar() {
   const dragX = useSharedValue(SCREEN_WIDTH - FAB_SIZE - 16);
   const dragY = useSharedValue(SCREEN_HEIGHT - 220);
   const dragScale = useSharedValue(1);
+
+  // ── NEW: Drag-feedback shared values ───────────────────────
+  const dragProgress = useSharedValue(0); // 0 → 1 toward dismiss threshold
+  const hintOpacity = useSharedValue(0); // drag-hint chevron at rest
+  const mountBounceY = useSharedValue(0); // one-time entrance bounce
+  const hapticFiredRef = useRef(false); // prevent double-haptic per drag
+  const prevIsHomePage = useRef(true); // track mode transitions
 
   // Active orders payload query
   const { data, refetch } = useQuery({
@@ -105,39 +118,29 @@ export function GlobalOrderBar() {
     }
   }, [lastStatusUpdate, refetch, queryClient]);
 
-  // Unified Filter engine mapping all active, delivery-transit & freshly resolved orders
   const activeOrder = useMemo<MobileOrderSummary | null>(() => {
     const orders = data?.data?.data?.orders;
     if (!orders || !Array.isArray(orders)) return null;
 
     const found = orders.find((order: MobileOrderSummary) => {
       if (dismissedOrderIds[order.order_id]) return false;
-
-      // 1. Show active orders in checkout lifecycle
       if (["PLACED", "ACCEPTED", "READY_FOR_PICKUP"].includes(order.status))
         return true;
-
-      // 2. Track completed orders if their delivery remains active
       if (
         order.status === "COMPLETED" &&
         order.delivery_status &&
         !["DELIVERED", "FAILED", "CANCELLED"].includes(order.delivery_status)
-      ) {
+      )
         return true;
-      }
-
-      // 3. Show terminated states temporarily until manual dismissal
       if (["CANCELLED", "REJECTED"].includes(order.status)) return true;
       if (order.status === "COMPLETED" && order.delivery_status === "DELIVERED")
         return true;
-
       return false;
     });
 
     return found || null;
   }, [data, dismissedOrderIds]);
 
-  // Trigger breathing pulse
   useEffect(() => {
     if (activeOrder) {
       pulseScale.value = withRepeat(
@@ -167,6 +170,36 @@ export function GlobalOrderBar() {
     }
   }, [activeOrder, pulseScale, pulseOpacity, iconBreathe]);
 
+  const isHomePage = pathname === "/(tabs)/home" || pathname === "/home";
+
+  // Reset positioning when switching modes
+  useEffect(() => {
+    if (!isHomePage) {
+      dragX.value = SCREEN_WIDTH - FAB_SIZE - 16;
+      dragY.value = SCREEN_HEIGHT - 220;
+      dragScale.value = 1;
+      dragProgress.value = 0;
+    }
+  }, [isHomePage, dragX, dragY, dragScale, dragProgress]);
+
+  // ── NEW: Mount bounce + hint reveal when entering FAB mode ─
+  useEffect(() => {
+    if (prevIsHomePage.current && !isHomePage && activeOrder) {
+      mountBounceY.value = withSequence(
+        withDelay(250, withTiming(10, { duration: 220 })),
+        withSpring(0, { damping: 6, stiffness: 140 }),
+      );
+      hintOpacity.value = withSequence(
+        withDelay(600, withTiming(0.55, { duration: 400 })),
+      );
+    }
+    if (!prevIsHomePage.current && isHomePage) {
+      hintOpacity.value = 0;
+      dragProgress.value = 0;
+    }
+    prevIsHomePage.current = isHomePage;
+  }, [isHomePage, activeOrder, mountBounceY, hintOpacity, dragProgress]);
+
   const handleDismiss = useCallback(() => {
     if (activeOrder) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -174,7 +207,6 @@ export function GlobalOrderBar() {
     }
   }, [activeOrder, dismissOrder]);
 
-  // Native elastic drag and pull-down dismissal listener
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -192,24 +224,42 @@ export function GlobalOrderBar() {
             1 - gestureState.dy / (DISMISS_THRESHOLD_DY * 1.6),
           );
           dragScale.value = shrinkFactor;
+
+          // ── NEW: drive drag progress 0→1 ──────────────────
+          const progress = Math.min(gestureState.dy / DISMISS_THRESHOLD_DY, 1);
+          dragProgress.value = progress;
+          hintOpacity.value = withTiming(0, { duration: 100 });
+
+          // ── NEW: haptic tick at threshold ─────────────────
+          if (progress >= 1 && !hapticFiredRef.current) {
+            hapticFiredRef.current = true;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }
+          if (progress < 0.85) {
+            hapticFiredRef.current = false;
+          }
         } else {
           dragScale.value = 1;
+          dragProgress.value = 0;
         }
       },
       onPanResponderRelease: (
         e: GestureResponderEvent,
         gestureState: PanResponderGestureState,
       ) => {
+        // ── NEW: reset all drag feedback ────────────────────
+        dragProgress.value = withTiming(0, { duration: 200 });
+        hapticFiredRef.current = false;
+
         if (gestureState.dy > DISMISS_THRESHOLD_DY) {
           dragY.value = withTiming(SCREEN_HEIGHT + 100, { duration: 250 });
           dragScale.value = withTiming(0, { duration: 200 });
-          setTimeout(() => {
-            handleDismiss();
-          }, 250);
+          setTimeout(() => handleDismiss(), 250);
           return;
         }
 
         dragScale.value = withSpring(1);
+        hintOpacity.value = withTiming(0.55, { duration: 400 });
 
         const snapLeft = 16;
         const snapRight = SCREEN_WIDTH - FAB_SIZE - 16;
@@ -236,6 +286,7 @@ export function GlobalOrderBar() {
     }
   }, [activeOrder]);
 
+  // ── Breathing animated styles ──────────────────────────────
   const pulseAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
     opacity: pulseOpacity.value,
@@ -248,21 +299,61 @@ export function GlobalOrderBar() {
   const fabAnimatedStyle = useAnimatedStyle(() => ({
     left: dragX.value,
     top: dragY.value,
-    transform: [{ scale: dragScale.value }],
+    transform: [{ scale: dragScale.value }, { translateY: mountBounceY.value }],
+  }));
+
+  // ── NEW: Drag-feedback animated styles ─────────────────────
+  const statusIconStyle = useAnimatedStyle(() => ({
+    opacity: 1 - dragProgress.value,
+    transform: [{ scale: 1 - dragProgress.value * 0.3 }],
+  }));
+
+  const closeIconStyle = useAnimatedStyle(() => ({
+    opacity: dragProgress.value,
+    transform: [{ scale: 0.4 + dragProgress.value * 0.6 }],
+  }));
+
+  const redOverlayStyle = useAnimatedStyle(() => ({
+    opacity: dragProgress.value * 0.9,
+  }));
+
+  const dismissLabelStyle = useAnimatedStyle(() => {
+    const show = dragProgress.value > 0.35;
+    const t = show ? Math.min((dragProgress.value - 0.35) / 0.25, 1) : 0;
+    return {
+      opacity: t,
+      transform: [{ translateY: (1 - t) * 6 }],
+    };
+  });
+
+  const rightHalfStyle = useAnimatedStyle(() => {
+    const p = dragProgress.value;
+    const rot = p <= 0.5 ? -180 + p * 2 * 180 : 0;
+    return { transform: [{ rotate: `${rot}deg` }] };
+  });
+
+  const leftHalfStyle = useAnimatedStyle(() => {
+    const p = dragProgress.value;
+    const rot = p > 0.5 ? -180 + (p - 0.5) * 2 * 180 : -180;
+    return { transform: [{ rotate: `${rot}deg` }] };
+  });
+
+  const ringTrackStyle = useAnimatedStyle(() => ({
+    opacity: 0.12 + dragProgress.value * 0.5,
+  }));
+
+  const hintChevronStyle = useAnimatedStyle(() => ({
+    opacity: hintOpacity.value * (1 - dragProgress.value),
   }));
 
   if (shouldHideOrderBar(pathname)) return null;
   if (!activeOrder) return null;
 
-  const isHomePage = pathname === "/(tabs)/home" || pathname === "/home";
-
-  // Brand Progression Palette Map (Deep brands → energetic light midbrands)
   const statusConfig = (() => {
     const oStatus = activeOrder.status;
     const dStatus: DeliveryStatus | undefined | null =
       activeOrder.delivery_status;
 
-    // Terminal states mappings
     if (oStatus === "CANCELLED") {
       return {
         text: "This order has been cancelled",
@@ -311,8 +402,6 @@ export function GlobalOrderBar() {
         isFailed: true,
       };
     }
-
-    // Active order progression mappings
     if (oStatus === "PLACED") {
       return {
         text: "Waiting for store confirmation",
@@ -328,7 +417,6 @@ export function GlobalOrderBar() {
         isFailed: false,
       };
     }
-
     if (oStatus === "ACCEPTED") {
       if (dStatus === "RIDER_NOTIFIED" || dStatus === "ACCEPTED") {
         return {
@@ -356,7 +444,6 @@ export function GlobalOrderBar() {
         isFailed: false,
       };
     }
-
     if (oStatus === "READY_FOR_PICKUP") {
       if (dStatus === "ARRIVED_AT_PHARMACY") {
         return {
@@ -370,7 +457,6 @@ export function GlobalOrderBar() {
           isFailed: false,
         };
       }
-      
       return {
         text: "Order packed & ready for pickup",
         icon: "cube-outline" as const,
@@ -382,7 +468,6 @@ export function GlobalOrderBar() {
         isFailed: false,
       };
     }
-
     if (oStatus === "COMPLETED") {
       if (dStatus === "PICKED_UP" || dStatus === "EN_ROUTE") {
         return {
@@ -415,7 +500,6 @@ export function GlobalOrderBar() {
         };
       }
     }
-
     return {
       text: "Updating order status...",
       icon: "swap-horizontal" as const,
@@ -447,6 +531,7 @@ export function GlobalOrderBar() {
 
     return (
       <Animated.View
+        key="global-order-bar-docked"
         entering={FadeInDown.duration(300)}
         exiting={FadeOut.duration(150)}
         style={[
@@ -474,7 +559,6 @@ export function GlobalOrderBar() {
             end={{ x: 1, y: 0 }}
             style={styles.gradient}
           >
-            {/* Heartbeat Breathing Icon circle */}
             <View style={styles.leftContainer}>
               <Animated.View style={[styles.pulseRing, pulseAnimatedStyle]} />
               <View style={styles.iconCircle}>
@@ -506,7 +590,6 @@ export function GlobalOrderBar() {
 
             <View style={styles.rightContainer}>
               {showHomeDismiss ? (
-                // Home dismiss action available ONLY on completed, cancelled, or rejected states
                 <TouchableOpacity
                   style={[
                     styles.dismissBtn,
@@ -518,7 +601,6 @@ export function GlobalOrderBar() {
                   <Ionicons name="close" size={14} color="#FFFFFF" />
                 </TouchableOpacity>
               ) : (
-                // Micro Stepper Progress representation for active orders
                 <View style={styles.progressTracker}>
                   <View
                     style={[
@@ -592,9 +674,10 @@ export function GlobalOrderBar() {
     );
   }
 
-  // ── Mode B: Draggable with pull-down-to-dismiss gesture ────────────
+  // ── Mode B: Draggable FAB with full drag-feedback system ───
   return (
     <Animated.View
+      key="global-order-bar-fab"
       {...panResponder.panHandlers}
       entering={FadeInRight.duration(350).springify().damping(15)}
       exiting={FadeOut.duration(150)}
@@ -614,6 +697,23 @@ export function GlobalOrderBar() {
         },
       ]}
     >
+      {/* ── ④ Circular progress ring ──────────────────────── */}
+      <View style={styles.ringContainer}>
+        {/* Track (always faintly visible) */}
+        <Animated.View style={[styles.ringTrack, ringTrackStyle]} />
+
+        {/* Right half arc (0 → 50 % of threshold) */}
+        <View style={styles.ringClipRight}>
+          <Animated.View style={[styles.ringHalfRight, rightHalfStyle]} />
+        </View>
+
+        {/* Left half arc (50 → 100 % of threshold) */}
+        <View style={styles.ringClipLeft}>
+          <Animated.View style={[styles.ringHalfLeft, leftHalfStyle]} />
+        </View>
+      </View>
+
+      {/* ── FAB body ──────────────────────────────────────── */}
       <Pressable onPress={handlePress} style={styles.fabPressable}>
         <LinearGradient
           colors={statusConfig.gradient}
@@ -621,12 +721,51 @@ export function GlobalOrderBar() {
           end={{ x: 1, y: 1 }}
           style={styles.fabGradient}
         >
+          {/* Pulse ring (breathing) */}
           <Animated.View style={[styles.fabPulseRing, pulseAnimatedStyle]} />
-          <Animated.View style={iconAnimatedStyle}>
-            <Ionicons name={statusConfig.icon} size={20} color="#FFFFFF" />
+
+          {/* ── ② Red danger overlay ─────────────────────── */}
+          <Animated.View style={[styles.fabRedOverlay, redOverlayStyle]}>
+            <LinearGradient
+              colors={["#ef4444", "#b91c1c"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.fabGradient}
+            />
           </Animated.View>
+
+          {/* ── ⑥ Drag-hint chevron (at rest) ────────────── */}
+          <Animated.View style={[styles.hintChevron, hintChevronStyle]}>
+            <Ionicons
+              name="chevron-down"
+              size={9}
+              color="rgba(255,255,255,0.8)"
+            />
+          </Animated.View>
+
+          {/* ── ① Icon crossfade: status → X ─────────────── */}
+          <View style={styles.fabIconStack}>
+            <Animated.View style={statusIconStyle}>
+              <Animated.View style={iconAnimatedStyle}>
+                <Ionicons
+                  name={statusConfig.icon}
+                  size={20}
+                  color="#FFFFFF"
+                />
+              </Animated.View>
+            </Animated.View>
+
+            <Animated.View style={[styles.fabIconAbsolute, closeIconStyle]}>
+              <Ionicons name="close" size={22} color="#FFFFFF" />
+            </Animated.View>
+          </View>
         </LinearGradient>
       </Pressable>
+
+      {/* ── ③ "Release to dismiss" label ─────────────────── */}
+      <Animated.View style={[styles.dismissLabel, dismissLabelStyle]}>
+        <Text style={styles.dismissLabelText}>Release to dismiss</Text>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -750,6 +889,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     elevation: 1,
   },
+
+  // ── FAB base ──────────────────────────────────────────────
   fabContainer: {
     position: "absolute",
     width: FAB_SIZE,
@@ -759,6 +900,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
+    overflow: "visible", // allow label + ring to paint outside
   },
   fabPressable: {
     flex: 1,
@@ -777,5 +919,113 @@ const styles = StyleSheet.create({
     height: FAB_SIZE,
     borderRadius: FAB_SIZE / 2,
     backgroundColor: "rgba(255, 255, 255, 0.35)",
+  },
+
+  // ── NEW: Red danger overlay ────────────────────────────────
+  fabRedOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    overflow: "hidden",
+  },
+
+  // ── NEW: Icon crossfade stack ──────────────────────────────
+  fabIconStack: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+  },
+  fabIconAbsolute: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // ── NEW: Drag-hint chevron ─────────────────────────────────
+  hintChevron: {
+    position: "absolute",
+    top: 5,
+    alignSelf: "center",
+  },
+
+  // ── NEW: Circular progress ring ────────────────────────────
+  ringContainer: {
+    position: "absolute",
+    top: -RING_OFFSET,
+    left: -RING_OFFSET,
+    width: RING_SIZE,
+    height: RING_SIZE,
+  },
+  ringTrack: {
+    position: "absolute",
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_HALF,
+    borderWidth: RING_BORDER,
+    borderColor: "rgba(255, 255, 255, 0.5)",
+  },
+  ringClipRight: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: RING_HALF,
+    height: RING_SIZE,
+    overflow: "hidden",
+  },
+  ringHalfRight: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_HALF,
+    borderWidth: RING_BORDER,
+    borderColor: "#FFFFFF",
+    borderLeftColor: "transparent",
+    borderBottomColor: "transparent",
+  },
+  ringClipLeft: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: RING_HALF,
+    height: RING_SIZE,
+    overflow: "hidden",
+  },
+  ringHalfLeft: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_HALF,
+    borderWidth: RING_BORDER,
+    borderColor: "#FFFFFF",
+    borderRightColor: "transparent",
+    borderTopColor: "transparent",
+  },
+
+  // ── NEW: Dismiss label ─────────────────────────────────────
+  dismissLabel: {
+    position: "absolute",
+    top: FAB_SIZE + 8,
+    left: -30,
+    right: -30,
+    alignItems: "center",
+  },
+  dismissLabelText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    overflow: "hidden",
+    letterSpacing: 0.2,
   },
 });
