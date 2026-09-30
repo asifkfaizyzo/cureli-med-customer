@@ -10,9 +10,9 @@ import {
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
-import { router, Stack } from "expo-router";
+import { router, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { LogBox } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { GlobalOrderBar } from "../src/components/OrderBar/GlobalOrderBar";
@@ -45,6 +45,14 @@ function SSEManager() {
 
 export default function RootLayout() {
   const { initialize, logout } = useAuthStore();
+  const pathname = usePathname();
+
+  // Keep a reference to the active pathname so interceptors always have the latest route state
+  const pathnameRef = useRef(pathname);
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -78,7 +86,10 @@ export default function RootLayout() {
           error?.response?.status === 403 &&
           error?.response?.data?.data?.code === "PROFILE_INCOMPLETE"
         ) {
-          router.replace("/onboarding/profile" as any);
+          // ONLY redirect if we are not already on the onboarding profile screen
+          if (pathnameRef.current !== "/onboarding/profile") {
+            router.replace("/onboarding/profile" as any);
+          }
         }
         return Promise.reject(error);
       },
