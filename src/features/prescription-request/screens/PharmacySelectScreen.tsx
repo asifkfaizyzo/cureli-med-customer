@@ -63,7 +63,7 @@ export function PharmacySelectScreen() {
       return res.shops ?? [];
     },
     enabled: lat != null && lng != null,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 3000 * 60 * 2,
   });
 
   const shops: ShopItem[] = shopsData ?? [];

@@ -2,39 +2,46 @@
 // src/features/prescription-request/screens/PrescriptionRequestUploadScreen.tsx
 // Step 1 — Upload prescription or medicine photos + choose delivery address
 
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
   ActivityIndicator,
   Animated,
   Easing,
-  Platform,
-  UIManager,
+  Image,
   LayoutAnimation,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { Ionicons, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
-import * as DocumentPicker from "expo-document-picker";
-import { LinearGradient } from "expo-linear-gradient";
 import { useDialog } from "../../../components/Dialog/DialogProvider";
-import { useTheme } from "../../../theme/ThemeContext";
-import { Spacing } from "../../../theme/spacing";
-import { Radius } from "../../../theme/radius";
-import { usePrescriptionRequestStore } from "../../../store/prescriptionRequestStore";
-import { prescriptionRequestApi } from "../api/prescriptionRequest.api";
-import { useAddresses } from "../../profile/hooks/useAddresses";
-import { AddressPickerSheet } from "../../cart/components/AddressPickerSheet";
 import { useDeliveryLocationStore } from "../../../store/deliveryLocationStore";
+import { usePrescriptionRequestStore } from "../../../store/prescriptionRequestStore";
+import { useTheme } from "../../../theme/ThemeContext";
+import { Radius } from "../../../theme/radius";
+import { Spacing } from "../../../theme/spacing";
+import { AddressPickerSheet } from "../../cart/components/AddressPickerSheet";
+import { useAddresses } from "../../profile/hooks/useAddresses";
+import { prescriptionRequestApi } from "../api/prescriptionRequest.api";
 
 // Enable layout animations on Android
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -74,7 +81,7 @@ function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
 
     // 2. Floating card 2 (Medicine pack) - slightly delayed
@@ -92,7 +99,7 @@ function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
 
     // 3. Pulse "OR" badge
@@ -110,7 +117,7 @@ function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
 
     // 4. Scanning laser beam
@@ -128,7 +135,7 @@ function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
 
     loopFloat1.start();
@@ -261,16 +268,14 @@ function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
             styles.heroVisualCard,
             {
               backgroundColor: colors.background.page,
-              borderColor: colors.status.infoBorder ?? (colors.brand.primary + "70"),
+              borderColor:
+                colors.status.infoBorder ?? colors.brand.primary + "70",
               transform: [{ translateY: floatAnim2 }],
             },
           ]}
         >
           <View
-            style={[
-              styles.cardHeaderIcon,
-              { backgroundColor: "#0284C718" },
-            ]}
+            style={[styles.cardHeaderIcon, { backgroundColor: "#0284C718" }]}
           >
             <MaterialCommunityIcons
               name="pill-multiple"
@@ -287,12 +292,7 @@ function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
             <View style={[styles.stripDot, { backgroundColor: "#0284C740" }]} />
           </View>
 
-          <View
-            style={[
-              styles.cardBadge,
-              { backgroundColor: "#0284C715" },
-            ]}
-          >
+          <View style={[styles.cardBadge, { backgroundColor: "#0284C715" }]}>
             <Text style={[styles.cardBadgeText, { color: "#0284C7" }]}>
               Medicine Strip
             </Text>
@@ -305,8 +305,20 @@ function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
         <Text style={[styles.heroHeading, { color: colors.text.primary }]}>
           Prescription or Medicine Photo
         </Text>
-        <Text style={[styles.heroDescription, { color: colors.text.secondary }]}>
-          Upload your <Text style={styles.heroHighlight}>doctor's prescription</Text> or simply snap a clear photo of the <Text style={styles.heroHighlight}>medicine box or strip</Text>.
+        <Text
+          style={[styles.heroDescription, { color: colors.text.secondary }]}
+        >
+          Snap a <Text style={styles.heroHighlight}>clear image</Text> of the
+          product or a <Text style={styles.heroHighlight}>screenshot</Text> of
+          the product.{"\n"}
+          <Text
+            style={{
+              color: colors.status.warning ?? "#D97706",
+              fontFamily: "Inter_500Medium",
+            }}
+          >
+            Make sure the product name is clearly visible.
+          </Text>
         </Text>
       </View>
 
@@ -318,14 +330,8 @@ function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
             { backgroundColor: colors.background.tint },
           ]}
         >
-          <Ionicons
-            name="camera-outline"
-            size={13}
-            color={colors.text.brand}
-          />
-          <Text
-            style={[styles.featureChipText, { color: colors.text.brand }]}
-          >
+          <Ionicons name="camera-outline" size={13} color={colors.text.brand} />
+          <Text style={[styles.featureChipText, { color: colors.text.brand }]}>
             Snap Strip/Box
           </Text>
         </View>
@@ -341,14 +347,26 @@ function PrescriptionUploadHeroIllustration({ colors }: { colors: any }) {
             size={13}
             color={colors.text.brand}
           />
-          <Text
-            style={[styles.featureChipText, { color: colors.text.brand }]}
-          >
+          <Text style={[styles.featureChipText, { color: colors.text.brand }]}>
             Prescription / PDF
           </Text>
         </View>
 
-        
+        <View
+          style={[
+            styles.featureChip,
+            { backgroundColor: colors.background.tint },
+          ]}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={13}
+            color={colors.text.muted}
+          />
+          <Text style={[styles.featureChipText, { color: colors.text.muted }]}>
+            JPG, PNG, PDF · Max 5 MB
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -550,7 +568,9 @@ export function PrescriptionRequestUploadScreen() {
           const uploaded = res.data?.data?.files ?? [];
 
           for (const file of uploaded) {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            LayoutAnimation.configureNext(
+              LayoutAnimation.Presets.easeInEaseOut,
+            );
             addUploadedFile({ ...file, uri: asset.uri });
           }
 
@@ -587,7 +607,7 @@ export function PrescriptionRequestUploadScreen() {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       removeUploadedFile(fileKey);
     },
-    [removeUploadedFile]
+    [removeUploadedFile],
   );
 
   const handleNext = useCallback(() => {
@@ -827,6 +847,11 @@ export function PrescriptionRequestUploadScreen() {
               {uploadedFiles.length === 0
                 ? "Add prescription or medicine photo"
                 : `Add more (${remainingSlots} left)`}
+            </Text>
+            <Text
+              style={[styles.supportInfoText, { color: colors.text.muted }]}
+            >
+              Supported: JPG, PNG, PDF · Max 5 MB per file · Up to 5 files
             </Text>
             <View style={styles.uploadOptions}>
               {(
@@ -1253,6 +1278,12 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: Radius.lg,
     borderWidth: 1,
+  },
+
+  supportInfoText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: -2,
   },
   addressText: { flex: 1 },
   addressLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
