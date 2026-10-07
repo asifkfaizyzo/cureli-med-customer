@@ -1,33 +1,33 @@
 // src/features/profile/screens/AddressFormScreen.tsx (do not remove this comment)
 // src/features/profile/screens/AddressFormScreen.tsx
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { MaterialIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
-  Switch,
-  KeyboardAvoidingView,
-  Platform,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { MaterialIcons } from "@expo/vector-icons";
+import { useDialog } from "../../../components/Dialog/DialogProvider";
+import { useTheme } from "../../../theme/ThemeContext";
+import type { PlaceDetails } from "../api/places.api";
+import { extractErrorMessage } from "../api/profile.api";
+import { LocationPickerSheet } from "../components/LocationPickerSheet";
+import type { AddressLabel } from "../constants/profile.constants";
+import { ADDRESS_LABELS } from "../constants/profile.constants";
 import { useAddresses } from "../hooks/useAddresses";
 import { useAddressMutations } from "../hooks/useAddressMutations";
 import { useProfile } from "../hooks/useProfile";
-import { extractErrorMessage } from "../api/profile.api";
-import { ADDRESS_LABELS } from "../constants/profile.constants";
-import { useTheme } from "../../../theme/ThemeContext";
-import { useDialog } from "../../../components/Dialog/DialogProvider";
-import { LocationPickerSheet } from "../components/LocationPickerSheet";
-import type { AddressLabel } from "../constants/profile.constants";
 import type { AddressFormData } from "../types/profile.types";
-import type { PlaceDetails } from "../api/places.api";
 
 // ── Form state ─────────────────────────────────────────────────
 
@@ -452,6 +452,11 @@ export function AddressFormScreen({ addressId }: AddressFormScreenProps) {
             visible={locationPickerVisible}
             onClose={() => setLocationPickerVisible(false)}
             onConfirm={handleLocationConfirm}
+            initialCoordinate={
+              form.latitude && form.longitude
+                ? { latitude: form.latitude, longitude: form.longitude }
+                : null
+            }
           />
 
           {/* ── Address Type ───────────────────────────────── */}

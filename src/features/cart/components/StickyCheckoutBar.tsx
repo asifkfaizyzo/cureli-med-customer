@@ -78,10 +78,11 @@ export function StickyCheckoutBar({
       await onPlaceOrder();
     } catch (error) {
       console.warn(
-        "⚠️ [Cart Checkout] Place Order failed. Releasing click-shield locks.",
+        "⚠️ [Cart Checkout] Place Order failed.",
         error,
       );
-      // Unlock if error occurs so the customer can correct the payment/address and retry
+    } finally {
+      // Always unlock the button so cancellations, alerts, or failures restore interactivity
       setLocalPlacing(false);
     }
   };

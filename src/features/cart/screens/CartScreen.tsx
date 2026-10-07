@@ -203,6 +203,7 @@ export function CartScreen() {
   const pickedAddressId = useDeliveryLocationStore(
     (s) => s.location.addressId ?? null,
   );
+  const location = useDeliveryLocationStore((s) => s.location);
 
   const resolvedAddress: Address | null = (() => {
     if (pickedAddressId) {
@@ -215,23 +216,58 @@ export function CartScreen() {
     if (addressesLoading) return;
     if (addresses.length === 0) return;
 
-    const pickedExists =
-      pickedAddressId !== null &&
-      addresses.some((a) => a.id === pickedAddressId);
+    const pickedAddress = pickedAddressId
+      ? addresses.find((a) => a.id === pickedAddressId)
+      : null;
 
-    if (pickedExists) return;
+    if (pickedAddress) {
+      // If the address exists, check if coordinates or text were edited externally
+      const targetLat = pickedAddress.latitude ?? null;
+      const targetLng = pickedAddress.longitude ?? null;
+      const targetArea = pickedAddress.custom_label ?? pickedAddress.label;
+      const targetLine = `${pickedAddress.city}, ${pickedAddress.state} ${pickedAddress.pincode}`;
 
+      const isOutOfSync =
+        location.latitude !== targetLat ||
+        location.longitude !== targetLng ||
+        location.area !== targetArea ||
+        location.addressLine !== targetLine;
+
+      if (isOutOfSync) {
+        selectAddress({
+          source: "saved",
+          area: targetArea,
+          addressLine: targetLine,
+          latitude: targetLat,
+          longitude: targetLng,
+          addressId: pickedAddress.id,
+        });
+      }
+      return;
+    }
+
+    // If no address was selected or picked address was deleted, fallback to default
     const toSelect = addresses.find((a) => a.is_default) ?? addresses[0];
-
-    selectAddress({
-      source: "saved",
-      area: toSelect.custom_label ?? toSelect.label,
-      addressLine: `${toSelect.city}, ${toSelect.state} ${toSelect.pincode}`,
-      latitude: toSelect.latitude ?? null,
-      longitude: toSelect.longitude ?? null,
-      addressId: toSelect.id,
-    });
-  }, [addresses, addressesLoading, pickedAddressId, selectAddress]);
+    if (toSelect) {
+      selectAddress({
+        source: "saved",
+        area: toSelect.custom_label ?? toSelect.label,
+        addressLine: `${toSelect.city}, ${toSelect.state} ${toSelect.pincode}`,
+        latitude: toSelect.latitude ?? null,
+        longitude: toSelect.longitude ?? null,
+        addressId: toSelect.id,
+      });
+    }
+  }, [
+    addresses,
+    addressesLoading,
+    pickedAddressId,
+    selectAddress,
+    location.latitude,
+    location.longitude,
+    location.area,
+    location.addressLine,
+  ]);
 
   const [addressSheetVisible, setAddressSheetVisible] = useState(false);
   const [patientSheetVisible, setPatientSheetVisible] = useState(false);
@@ -314,7 +350,7 @@ export function CartScreen() {
   const firstItem = items[0] as any;
   const branchLat = firstItem?.branchLatitude ?? null;
   const branchLng = firstItem?.branchLongitude ?? null;
-  const location = useDeliveryLocationStore((s) => s.location);
+
   const userLat = location.latitude;
   const userLng = location.longitude;
 

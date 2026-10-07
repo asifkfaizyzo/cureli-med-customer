@@ -1,28 +1,28 @@
 // src/features/profile/components/LocationPickerSheet.tsx (do not remove this comment)
 // src/features/profile/components/LocationPickerSheet.tsx
 
-import React, { useState, useCallback } from "react";
+import { MaterialIcons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
-  View,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Platform,
-  KeyboardAvoidingView,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "../../../theme/ThemeContext";
-import { useLocationSearch } from "../hooks/useLocationSearch";
-import { useCurrentLocation } from "../hooks/useCurrentLocation";
+import type { PlaceDetails, PlaceSuggestion } from "../api/places.api";
 import { placesApi } from "../api/places.api";
+import { useCurrentLocation } from "../hooks/useCurrentLocation";
+import { useLocationSearch } from "../hooks/useLocationSearch";
+import { LocationMapPicker } from "./LocationMapPicker";
 import { LocationSearchBar } from "./LocationSearchBar";
 import { LocationSuggestionList } from "./LocationSuggestionList";
-import { LocationMapPicker } from "./LocationMapPicker";
-import type { PlaceDetails, PlaceSuggestion } from "../api/places.api";
 
 interface Coordinate {
   latitude: number;
@@ -33,12 +33,15 @@ interface LocationPickerSheetProps {
   visible: boolean;
   onClose: () => void;
   onConfirm: (details: PlaceDetails) => void;
+  /** Optional seed coordinate — used when editing an existing address */
+  initialCoordinate?: Coordinate | null;
 }
 
 export function LocationPickerSheet({
   visible,
   onClose,
   onConfirm,
+  initialCoordinate = null,
 }: LocationPickerSheetProps) {
   const { colors, isDark } = useTheme();
 
@@ -68,6 +71,37 @@ export function LocationPickerSheet({
   } = useCurrentLocation();
 
   const brandColor = isDark ? colors.brand.accent : colors.brand.primary;
+
+  // ── Seed map with existing coordinate when sheet opens ─────
+  // Also triggers reverse-geocode so the user sees the address text
+  // and can confirm immediately without extra interaction.
+  useEffect(() => {
+    if (!visible) return;
+    if (!initialCoordinate) return;
+
+    setCoordinate(initialCoordinate);
+    setIsReverseGeocoding(true);
+
+    placesApi
+      .reverseGeocode(initialCoordinate.latitude, initialCoordinate.longitude)
+      .then((details) => {
+        setSelectedDetails(details);
+      })
+      .catch(() => {
+        // Fallback: still allow confirmation using just the coordinates
+        setSelectedDetails({
+          formatted_address: "Current pinned location",
+          latitude: initialCoordinate.latitude,
+          longitude: initialCoordinate.longitude,
+        } as PlaceDetails);
+      })
+      .finally(() => {
+        setIsReverseGeocoding(false);
+      });
+    // We intentionally only react to `visible` flipping true.
+    // initialCoordinate changes while open should NOT re-trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   // ── Helpers ────────────────────────────────────────────────
 
