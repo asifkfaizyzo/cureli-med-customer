@@ -39,6 +39,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   TextInput,
+  RefreshControl,
   type ListRenderItem,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -154,6 +155,20 @@ export default function ShopScreen() {
     hasNextPage,
     isFetchingNextPage,
   } = useShopMedicines(shopId ?? "", effectiveBranchId ?? "", debouncedSearch);
+
+  // ── Pull-to-Refresh State & Handler ───────────────────────
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchProfile(), refetchMedicines()]);
+    } catch (error) {
+      console.warn("Pull-to-refresh failed:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchProfile, refetchMedicines]);
 
   // ── Cart quantity map ─────────────────────────────────────
   const cartQuantityMap = useMemo(() => {
@@ -571,6 +586,14 @@ export default function ShopScreen() {
           medicines.length === 0 ? styles.emptyContent : styles.listContent,
           { paddingBottom: listBottomPadding },
         ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.brand.primary}
+            colors={[colors.brand.primary]}
+          />
+        }
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={11}

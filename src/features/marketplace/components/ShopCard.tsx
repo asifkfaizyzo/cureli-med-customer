@@ -1,4 +1,4 @@
-// src/features/marketplace/components/ShopCard.tsx (do not remove this comment)
+// cureli-med-customer/src/features/marketplace/components/ShopCard.tsx (do not remove this comment)
 //Q:\YourZeroesAndOnes\cureli\curely_erp\cureli-mobile\src\features\marketplace\components\ShopCard.tsx
 
 import React, { memo } from "react";
@@ -9,17 +9,56 @@ import { Typography } from "../../../theme/typography";
 import { Spacing } from "../../../theme/spacing";
 import { Radius } from "../../../theme/radius";
 import { RemoteImage } from "../../../components/RemoteImage";
-import type { ShopSearchResult } from "../../../types/shop";
+import type { ShopSearchResult, ShopTag } from "../../../types/shop";
 
 interface ShopCardProps {
   shop: ShopSearchResult;
   onPress: (shop: ShopSearchResult) => void;
 }
 
+// ── Tag Pill Component ───────────────────────────────────────
+
+const MAX_VISIBLE_TAGS = 3;
+
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.substring(0, 2), 16) || 0;
+  const g = parseInt(clean.substring(2, 4), 16) || 0;
+  const b = parseInt(clean.substring(4, 6), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+const TagPill = memo(function TagPill({ tag }: { tag: ShopTag }) {
+  return (
+    <View
+      style={[
+        styles.tagPill,
+        {
+          backgroundColor: hexToRgba(tag.colorHex, 0.05),
+          borderColor: hexToRgba(tag.colorHex, 0.15),
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.tagPillText,
+          { color: tag.colorHex },
+        ]}
+        numberOfLines={1}
+      >
+        {tag.label}
+      </Text>
+    </View>
+  );
+});
+
 function ShopCardComponent({ shop, onPress }: ShopCardProps) {
   const { colors } = useTheme();
   const branch = shop.nearestBranch;
   const isClosed = branch ? !branch.isOpen : false;
+
+  const visibleTags = (shop.tags || []).slice(0, MAX_VISIBLE_TAGS);
+  const overflowCount = (shop.tags || []).length - MAX_VISIBLE_TAGS;
 
   return (
     <TouchableOpacity
@@ -30,8 +69,7 @@ function ShopCardComponent({ shop, onPress }: ShopCardProps) {
         {
           backgroundColor: colors.background.card,
           borderColor: colors.border.subtle,
-          // ◄◄ CHANGED: Grey out closed shops
-          opacity: isClosed ? 0.6 : 1,
+          opacity: isClosed ? 0.65 : 1,
         },
       ]}
     >
@@ -39,7 +77,7 @@ function ShopCardComponent({ shop, onPress }: ShopCardProps) {
       <View style={styles.topRow}>
         <RemoteImage
           uri={shop.logoUrl ?? null}
-          style={[styles.logoCard]}
+          style={styles.logoCard}
           resizeMode="contain"
           mode="shop"
           fallbackIcon="storefront-outline"
@@ -71,23 +109,24 @@ function ShopCardComponent({ shop, onPress }: ShopCardProps) {
               styles.badge,
               {
                 backgroundColor: branch.isOpen
-                  ? colors.background.tint
-                  : "#F5F5F5",
-                borderColor: branch.isOpen ? colors.border.brand : "#E0E0E0",
+                  ? hexToRgba(colors.status.success, 0.05)
+                  : hexToRgba(colors.text.muted, 0.05),
+                borderColor: branch.isOpen
+                  ? hexToRgba(colors.status.success, 0.15)
+                  : hexToRgba(colors.text.muted, 0.15),
               },
             ]}
           >
             <View
               style={[
                 styles.dot,
-                { backgroundColor: branch.isOpen ? "#22C55E" : "#9E9E9E" },
+                { backgroundColor: branch.isOpen ? colors.status.success : colors.text.muted },
               ]}
             />
             <Text
               style={[
                 styles.badgeText,
                 {
-                  // ◄◄ CHANGED: Rich status message
                   color: branch.isOpen ? colors.text.brand : colors.text.muted,
                 },
               ]}
@@ -109,44 +148,34 @@ function ShopCardComponent({ shop, onPress }: ShopCardProps) {
         </Text>
       ) : null}
 
-      {/* ── Capability pills ── */}
-      {/* {branch ? (
-        <View style={styles.pillRow}>
-          {branch.pickupEnabled ? (
+      {/* ── Shop Tags ── */}
+      {visibleTags.length > 0 ? (
+        <View style={styles.tagRow}>
+          {visibleTags.map((tag) => (
+            <TagPill key={tag.slug} tag={tag} />
+          ))}
+          {overflowCount > 0 ? (
             <View
               style={[
-                styles.pill,
+                styles.tagPill,
                 {
-                  backgroundColor: colors.background.tint,
-                  borderColor: colors.border.brand,
+                  backgroundColor: hexToRgba(colors.text.muted, 0.05),
+                  borderColor: hexToRgba(colors.text.muted, 0.15),
                 },
               ]}
             >
-              <Ionicons name="bag-handle-outline" size={11} color={colors.text.brand} />
-              <Text style={[styles.pillText, { color: colors.text.brand }]}>
-                Pickup
-              </Text>
-            </View>
-          ) : null}
-
-          {branch.deliveryEnabled ? (
-            <View
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: colors.background.tint,
-                  borderColor: colors.border.brand,
-                },
-              ]}
-            >
-              <Ionicons name="bicycle-outline" size={11} color={colors.text.brand} />
-              <Text style={[styles.pillText, { color: colors.text.brand }]}>
-                Delivery
+              <Text
+                style={[
+                  styles.tagPillText,
+                  { color: colors.text.muted },
+                ]}
+              >
+                +{overflowCount}
               </Text>
             </View>
           ) : null}
         </View>
-      ) : null} */}
+      ) : null}
 
       {/* ── Bottom row ── */}
       <View style={styles.bottomRow}>
@@ -171,24 +200,6 @@ function ShopCardComponent({ shop, onPress }: ShopCardProps) {
           </View>
         ) : null}
 
-        {/* <View style={styles.metaItem}>
-          <Ionicons
-            name="star"
-            size={13}
-            color={shop.rating != null ? "#FBBF24" : colors.text.faint}
-          />
-          <Text
-            style={[
-              styles.metaText,
-              {
-                color: shop.rating != null ? colors.text.muted : colors.text.faint,
-              },
-            ]}
-          >
-            {shop.rating != null ? shop.rating.toFixed(1) : "No rating yet"}
-          </Text>
-        </View> */}
-
         <TouchableOpacity
           onPress={() => onPress(shop)}
           activeOpacity={0.8}
@@ -196,7 +207,7 @@ function ShopCardComponent({ shop, onPress }: ShopCardProps) {
             styles.cta,
             {
               backgroundColor: isClosed
-                ? colors.text.muted
+                ? colors.text.disabled
                 : colors.brand.primary,
             },
           ]}
@@ -234,12 +245,12 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
       },
       android: {
-        elevation: 6,
+        elevation: 3,
       },
     }),
   },
@@ -249,6 +260,7 @@ const styles = StyleSheet.create({
   },
   name: {
     ...Typography.bodyMedium,
+    letterSpacing: -0.1,
   },
   medicineCount: {
     ...Typography.small,
@@ -257,45 +269,45 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
     borderRadius: Radius.full,
     borderWidth: 1,
     flexShrink: 1,
     maxWidth: "45%",
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     flexShrink: 0,
   },
   badgeText: {
-    ...Typography.caption,
+    fontSize: 10,
     fontFamily: "Inter_600SemiBold",
     flexShrink: 1,
+    letterSpacing: -0.1,
   },
   description: {
     ...Typography.small,
     lineHeight: 18,
   },
-  pillRow: {
+  tagRow: {
     flexDirection: "row",
-    gap: Spacing.sm,
     flexWrap: "wrap",
+    gap: 6,
+    marginTop: 2,
   },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+  tagPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
     borderRadius: Radius.full,
     borderWidth: 1,
   },
-  pillText: {
-    ...Typography.caption,
+  tagPillText: {
+    fontSize: 10.5,
     fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.1,
   },
   bottomRow: {
     flexDirection: "row",
@@ -318,11 +330,12 @@ const styles = StyleSheet.create({
   cta: {
     marginLeft: "auto",
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingVertical: 6,
     borderRadius: Radius.full,
   },
   ctaText: {
-    ...Typography.smallMedium,
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
   },
 });

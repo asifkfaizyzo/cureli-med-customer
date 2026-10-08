@@ -1,33 +1,41 @@
 // src/features/cart/components/AddressPickerSheet.tsx (do not remove this comment)
 // src/features/cart/components/AddressPickerSheet.tsx
 
-import React, { useCallback, useEffect } from 'react';
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useCallback, useEffect } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
+  Dimensions,
   Modal,
   ScrollView,
-  Dimensions,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useTheme } from '../../../theme/ThemeContext';
-import { Spacing } from '../../../theme/spacing';
-import { useAddresses } from '../../profile/hooks/useAddresses';
-import { useDeliveryLocationStore } from '../../../store/deliveryLocationStore';
-import type { Address } from '../../profile/types/profile.types';
+import { useDeliveryLocationStore } from "../../../store/deliveryLocationStore";
+import { useTheme } from "../../../theme/ThemeContext";
+import { Spacing } from "../../../theme/spacing";
+import { useAddresses } from "../../profile/hooks/useAddresses";
+import type { Address } from "../../profile/types/profile.types";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const MAX_SHEET_HEIGHT = SCREEN_HEIGHT * 0.65;
 
 interface AddressPickerSheetProps {
   visible: boolean;
   onClose: () => void;
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.substring(0, 2), 16) || 0;
+  const g = parseInt(clean.substring(2, 4), 16) || 0;
+  const b = parseInt(clean.substring(4, 6), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 // ── Single address row ────────────────────────────────────────
@@ -36,20 +44,22 @@ function AddressRow({
   address,
   isSelected,
   onSelect,
+  onEdit,
 }: {
   address: Address;
   isSelected: boolean;
   onSelect: (address: Address) => void;
+  onEdit: (address: Address) => void;
 }) {
   const { colors, isDark } = useTheme();
   const brandColor = isDark ? colors.brand.accent : colors.brand.primary;
 
   const labelIcon =
-    address.label === 'Home'
-      ? 'home'
-      : address.label === 'Work'
-        ? 'business'
-        : 'location-on';
+    address.label === "Home"
+      ? "home"
+      : address.label === "Work"
+        ? "business"
+        : "location-on";
 
   return (
     <TouchableOpacity
@@ -62,18 +72,20 @@ function AddressRow({
             ? colors.background.tint
             : colors.background.card,
           borderColor: isSelected ? brandColor : colors.border.default,
+          borderWidth: isSelected ? 2 : 1,
         },
       ]}
       accessibilityRole="radio"
       accessibilityState={{ checked: isSelected }}
       accessibilityLabel={`${address.custom_label ?? address.label}, ${address.address_line_1}, ${address.city}`}
     >
+      {/* Visual Type Indicator */}
       <View
         style={[
           styles.addressIcon,
           {
             backgroundColor: isSelected
-              ? brandColor + '20'
+              ? hexToRgba(brandColor, 0.15)
               : colors.background.tint,
           },
         ]}
@@ -85,13 +97,14 @@ function AddressRow({
         />
       </View>
 
+      {/* Primary Details Block */}
       <View style={styles.addressText}>
         <Text
           style={[
             styles.addressLabel,
             {
               color: isSelected ? brandColor : colors.text.primary,
-              fontFamily: 'Inter_600SemiBold',
+              fontFamily: "Inter_600SemiBold",
             },
           ]}
         >
@@ -100,7 +113,7 @@ function AddressRow({
         <Text
           style={[
             styles.addressLine,
-            { color: colors.text.muted, fontFamily: 'Inter_400Regular' },
+            { color: colors.text.muted, fontFamily: "Inter_400Regular" },
           ]}
           numberOfLines={2}
         >
@@ -112,13 +125,13 @@ function AddressRow({
             address.pincode,
           ]
             .filter(Boolean)
-            .join(', ')}
+            .join(", ")}
         </Text>
         {address.recipient_name ? (
           <Text
             style={[
               styles.addressRecipient,
-              { color: colors.text.faint, fontFamily: 'Inter_400Regular' },
+              { color: colors.text.faint, fontFamily: "Inter_400Regular" },
             ]}
           >
             For: {address.recipient_name}
@@ -126,21 +139,24 @@ function AddressRow({
         ) : null}
       </View>
 
-      {isSelected ? (
+      {/* Micro-Minimal Top-Right Edit Pen Icon */}
+      <TouchableOpacity
+        onPress={(e) => {
+          e.stopPropagation();
+          onEdit(address);
+        }}
+        activeOpacity={0.5}
+        style={styles.editButton}
+        hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+        accessibilityLabel="Edit address"
+      >
         <Ionicons
-          name="checkmark-circle"
-          size={20}
-          color={brandColor}
-          style={{ flexShrink: 0 }}
+          name="create-outline"
+          size={16}
+          color={isSelected ? brandColor : colors.text.muted}
+          style={{ opacity: isSelected ? 0.9 : 0.6 }}
         />
-      ) : (
-        <View
-          style={[
-            styles.unselectedDot,
-            { borderColor: colors.border.default },
-          ]}
-        />
-      )}
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -161,29 +177,15 @@ export function AddressPickerSheet({
   const selectedAddressId = currentLocation.addressId ?? null;
 
   // ── Auto-select when nothing is selected yet ──────────────
-  //
-  // Fires whenever `addresses` changes (i.e. after React Query
-  // refetches on remount following a new address being created).
-  //
-  // Conditions for auto-select:
-  //   1. Not currently loading
-  //   2. There is at least one address
-  //   3. Nothing is selected yet (addressId is null)
-  //
-  // Priority: default address first, then first in list.
-  // This covers the "first-time user just created an address
-  // and came back to cart" flow without overriding a manual pick.
-
   useEffect(() => {
     if (isLoading) return;
     if (addresses.length === 0) return;
     if (selectedAddressId !== null) return;
 
-    const toSelect =
-      addresses.find((a) => a.is_default) ?? addresses[0];
+    const toSelect = addresses.find((a) => a.is_default) ?? addresses[0];
 
     selectAddress({
-      source: 'saved',
+      source: "saved",
       area: toSelect.custom_label ?? toSelect.label,
       addressLine: `${toSelect.city}, ${toSelect.state} ${toSelect.pincode}`,
       latitude: toSelect.latitude ?? null,
@@ -193,11 +195,10 @@ export function AddressPickerSheet({
   }, [addresses, isLoading, selectedAddressId, selectAddress]);
 
   // ── Select handler ────────────────────────────────────────
-
   const handleSelect = useCallback(
     (address: Address) => {
       selectAddress({
-        source: 'saved',
+        source: "saved",
         area: address.custom_label ?? address.label,
         addressLine: `${address.city}, ${address.state} ${address.pincode}`,
         latitude: address.latitude ?? null,
@@ -209,15 +210,25 @@ export function AddressPickerSheet({
     [selectAddress, onClose],
   );
 
+  // ── Edit address handler ──────────────────────────────────
+  const handleEdit = useCallback(
+    (address: Address) => {
+      onClose();
+      setTimeout(() => {
+        router.push(`/profile/address/${address.id}` as any);
+      }, 250);
+    },
+    [onClose],
+  );
+
   const handleAddNew = useCallback(() => {
     onClose();
     setTimeout(() => {
-      router.push('/profile/address/new' as any);
-    }, 300);
+      router.push("/profile/address/new" as any);
+    }, 250);
   }, [onClose]);
 
   // ── Content ───────────────────────────────────────────────
-
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -226,7 +237,7 @@ export function AddressPickerSheet({
           <Text
             style={[
               styles.centerText,
-              { color: colors.text.muted, fontFamily: 'Inter_400Regular' },
+              { color: colors.text.muted, fontFamily: "Inter_400Regular" },
             ]}
           >
             Loading addresses…
@@ -248,7 +259,7 @@ export function AddressPickerSheet({
               styles.centerText,
               {
                 color: colors.text.secondary,
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: "Inter_600SemiBold",
               },
             ]}
           >
@@ -257,7 +268,7 @@ export function AddressPickerSheet({
           <Text
             style={[
               styles.centerSub,
-              { color: colors.text.muted, fontFamily: 'Inter_400Regular' },
+              { color: colors.text.muted, fontFamily: "Inter_400Regular" },
             ]}
           >
             Add an address to continue
@@ -278,6 +289,7 @@ export function AddressPickerSheet({
             address={address}
             isSelected={address.id === selectedAddressId}
             onSelect={handleSelect}
+            onEdit={handleEdit}
           />
         ))}
       </ScrollView>
@@ -334,7 +346,7 @@ export function AddressPickerSheet({
           <Text
             style={[
               styles.sheetTitle,
-              { color: colors.text.primary, fontFamily: 'Inter_700Bold' },
+              { color: colors.text.primary, fontFamily: "Inter_700Bold" },
             ]}
           >
             Deliver to
@@ -381,7 +393,7 @@ export function AddressPickerSheet({
             <Text
               style={[
                 styles.addNewText,
-                { color: brandColor, fontFamily: 'Inter_600SemiBold' },
+                { color: brandColor, fontFamily: "Inter_600SemiBold" },
               ]}
             >
               Add new address
@@ -396,28 +408,25 @@ export function AddressPickerSheet({
 // ── Styles ────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // ── Modal layers ──────────────────────────────────────────
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   sheet: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 16,
   },
-
-  // ── Drag handle ───────────────────────────────────────────
   dragHandleRow: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 10,
     paddingBottom: 4,
   },
@@ -426,62 +435,56 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
-
-  // ── Header ────────────────────────────────────────────────
   sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
   },
   sheetTitle: { fontSize: 17 },
-
-  // ── Content area ──────────────────────────────────────────
   contentArea: {
     flexShrink: 1,
   },
-
   centerContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: Spacing.sm,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.xl,
   },
   centerText: {
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: Spacing.sm,
   },
   centerSub: {
     fontSize: 13,
-    textAlign: 'center',
+    textAlign: "center",
   },
-
   list: {
     paddingTop: Spacing.sm,
     paddingHorizontal: Spacing.base,
     paddingBottom: Spacing.md,
     gap: Spacing.sm,
   },
-
-  // ── Address row ───────────────────────────────────────────
   addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
-    borderWidth: 1.5,
     borderRadius: 12,
-    padding: 14,
+    paddingVertical: 14,
+    paddingLeft: 14,
+    paddingRight: 32, // defensive buffer space for absolute corner button
   },
   addressIcon: {
     width: 38,
     height: 38,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0,
   },
   addressText: {
@@ -491,27 +494,28 @@ const styles = StyleSheet.create({
   addressLabel: { fontSize: 14 },
   addressLine: { fontSize: 12, lineHeight: 17 },
   addressRecipient: { fontSize: 11, marginTop: 1 },
-  unselectedDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    flexShrink: 0,
+  editButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 10,
   },
-
-  // ── Add new ───────────────────────────────────────────────
+  unselectedDot: {
+    // Hidden in this design style, keeping style key to prevent empty references
+    display: "none",
+  },
   addNewContainer: {
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
   },
   addNewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     borderWidth: 1.5,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderRadius: 12,
     paddingVertical: 14,
   },

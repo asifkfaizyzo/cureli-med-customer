@@ -1,4 +1,4 @@
-// src/types/shop.ts (do not remove this comment)
+// cureli-med-customer/src/types/shop.ts (do not remove this comment)
 // src/types/shop.ts
 //
 // Canonical types for Cureli mobile shop discovery.
@@ -7,6 +7,15 @@
 //   1. REAL  — shapes returned by GET /mobile/shops/* (real DB data)
 //   2. ENRICHED — shop branch with computed display fields
 //   3. CART  — pharmacy context stored in cart items
+
+// ── Shop Tag ─────────────────────────────────────────────────
+
+export interface ShopTag {
+  slug: string;
+  label: string;
+  colorHex: string;
+  description: string | null;
+}
 
 // ── Branch (inside search result and shop profile) ────────────
 
@@ -18,7 +27,7 @@ export interface ShopBranch {
   longitude: number | null;
   distanceKm: number | null;
   isOpen: boolean;
-  statusMessage: string;    // ◄◄ NEW — e.g. "Open until 9:30 PM", "Opens tomorrow at 9:00 AM"
+  statusMessage: string;
   is24Hours: boolean;
   openingTime: string | null;
   closingTime: string | null;
@@ -44,6 +53,8 @@ export interface ShopSearchResult {
   name: string;
   description: string | null;
   logoUrl: string | null;
+  /** Pharmacy classification tags in priority order. */
+  tags: ShopTag[];
   /** The nearest branch to the user, or first alphabetically if no location. */
   nearestBranch: ShopBranch | null;
   /** Count of marketplace_enabled branches. */
@@ -79,6 +90,8 @@ export interface ShopProfile {
   logoUrl: string | null;
   bannerUrl: string | null;
   supportPhone: string | null;
+  /** Pharmacy classification tags in priority order. */
+  tags: ShopTag[];
   marketplaceStatus: string;
   isLive: boolean;
   /** All marketplace-onboarded branches (enabled + disabled). */
@@ -87,14 +100,13 @@ export interface ShopProfile {
 }
 
 export interface ShopProfileResponse {
-  // The backend returns the profile directly as data
-  // Matches success(res, result) envelope
   shopId: string;
   name: string;
   description: string | null;
   logoUrl: string | null;
   bannerUrl: string | null;
   supportPhone: string | null;
+  tags: ShopTag[];
   marketplaceStatus: string;
   isLive: boolean;
   branches: ShopProfileBranch[];
@@ -118,11 +130,6 @@ export interface BranchMedicineItem {
   category: string | null;
   genericName: string | null;
   type: import("./medicine").MedicineType | null;
-  /**
-   * Real price set by the shop for this listing.
-   * null if the shop has not set a price — frontend falls back to
-   * generateMarketplaceData for demo price display.
-   */
   listingPrice: number | null;
   requiresPrescription: boolean;
   stockStatus: string;
@@ -141,7 +148,6 @@ export interface BranchMedicinesResponse {
 }
 
 // ── Cart pharmacy context ─────────────────────────────────────
-// Stored on each CartItem to enforce single-pharmacy cart.
 
 export interface CartPharmacy {
   shopId: string;

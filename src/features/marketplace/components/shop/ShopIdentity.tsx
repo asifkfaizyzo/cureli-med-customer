@@ -10,20 +10,31 @@ import { Spacing } from "../../../../theme/spacing";
 import { Radius } from "../../../../theme/radius";
 import { RemoteImage } from "../../../../components/RemoteImage";
 import type { useTheme } from "../../../../theme/ThemeContext";
-import type { ShopProfileResponse } from "../../../../types/shop";
+import type { ShopProfileResponse, ShopTag } from "../../../../types/shop";
 
 interface ShopIdentityProps {
   profile: ShopProfileResponse;
   colors: ReturnType<typeof useTheme>["colors"];
+  tags?: ShopTag[];
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.substring(0, 2), 16) || 0;
+  const g = parseInt(clean.substring(2, 4), 16) || 0;
+  const b = parseInt(clean.substring(4, 6), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 const BANNER_HEIGHT = 200;
 const LOGO_SIZE = 80;
 const LOGO_OVERLAP = 40;
 
-export function ShopIdentity({ profile, colors }: ShopIdentityProps) {
+export function ShopIdentity({ profile, colors, tags }: ShopIdentityProps) {
+  const displayTags = tags ?? profile.tags;
+
   return (
-    <View>
+    <View style={{ backgroundColor: colors.background.page }}>
       {/* ── Hero (banner + gradient + name + rating) ── */}
       <View style={styles.hero}>
         {/*
@@ -50,20 +61,6 @@ export function ShopIdentity({ profile, colors }: ShopIdentityProps) {
           pointerEvents="none"
         />
 
-        {/* Rating pill */}
-        {/* <View style={styles.ratingPill}>
-          <Ionicons
-            name="star"
-            size={12}
-            color={profile.rating != null ? "#FBBF24" : "#E5E7EB"}
-          />
-          <Text style={styles.ratingPillText}>
-            {profile.rating != null
-              ? profile.rating.toFixed(1)
-              : "No rating yet"}
-          </Text>
-        </View> */}
-
         {/* Shop name */}
         <View style={styles.nameOverlay}>
           <Text style={styles.shopName} numberOfLines={2}>
@@ -83,8 +80,8 @@ export function ShopIdentity({ profile, colors }: ShopIdentityProps) {
           style={[
             styles.logoCard,
             {
-              
               borderColor: colors.border.subtle,
+              backgroundColor: colors.background.card,
             },
           ]}
           resizeMode="contain"
@@ -106,22 +103,34 @@ export function ShopIdentity({ profile, colors }: ShopIdentityProps) {
           </Text>
         ) : null}
 
-        {/* {profile.supportPhone ? (
-          <View
-            style={[
-              styles.phoneChip,
-              {
-                backgroundColor: colors.background.tint,
-                borderColor: colors.border.brand,
-              },
-            ]}
-          >
-            <Ionicons name="call-outline" size={14} color={colors.text.brand} />
-            <Text style={[styles.phoneText, { color: colors.text.brand }]}>
-              {profile.supportPhone}
-            </Text>
+        {/* ── Shop Tags ── */}
+        {displayTags && displayTags.length > 0 ? (
+          <View style={styles.tagsContainer}>
+            {displayTags.map((tag) => (
+              <View
+                key={tag.slug}
+                style={[
+                  styles.tagPill,
+                  {
+                    backgroundColor: hexToRgba(tag.colorHex, 0.05),
+                    borderColor: hexToRgba(tag.colorHex, 0.15),
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tagText,
+                    {
+                      color: tag.colorHex,
+                    },
+                  ]}
+                >
+                  {tag.label}
+                </Text>
+              </View>
+            ))}
           </View>
-        ) : null} */}
+        ) : null}
       </View>
     </View>
   );
@@ -133,7 +142,6 @@ const styles = StyleSheet.create({
     height: BANNER_HEIGHT,
     position: "relative",
   },
-  // RemoteImage fills this absolutely
   banner: {
     width: "100%",
     height: "100%",
@@ -180,7 +188,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     marginTop: -LOGO_OVERLAP,
   },
-  // RemoteImage receives this as its style prop
   logoCard: {
     width: LOGO_SIZE,
     height: LOGO_SIZE,
@@ -207,6 +214,23 @@ const styles = StyleSheet.create({
   description: {
     ...Typography.body,
     lineHeight: 22,
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: Spacing.xs,
+  },
+  tagPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+  },
+  tagText: {
+    fontSize: 10.5,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.1,
   },
   phoneChip: {
     flexDirection: "row",

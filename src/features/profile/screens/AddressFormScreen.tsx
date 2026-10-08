@@ -27,7 +27,8 @@ import { ADDRESS_LABELS } from "../constants/profile.constants";
 import { useAddresses } from "../hooks/useAddresses";
 import { useAddressMutations } from "../hooks/useAddressMutations";
 import { useProfile } from "../hooks/useProfile";
-import type { AddressFormData } from "../types/profile.types";
+import type { Address, AddressFormData } from "../types/profile.types";
+import { useDeliveryLocationStore } from "../../../store/deliveryLocationStore";
 
 // ── Form state ─────────────────────────────────────────────────
 
@@ -280,9 +281,34 @@ export function AddressFormScreen({ addressId }: AddressFormScreenProps) {
 
     try {
       if (isEditMode && addressId) {
-        await updateAddress({ id: addressId, ...payload });
+        const updatedAddress = (await updateAddress({ id: addressId, ...payload })) as unknown as Address;
+        
+        // Dynamic Bridge: Sync selection store immediately if they edited the selected address
+        const currentlySelectedId = useDeliveryLocationStore.getState().location.addressId;
+        if (currentlySelectedId === addressId && updatedAddress) {
+          useDeliveryLocationStore.getState().selectAddress({
+            source: 'saved',
+            area: updatedAddress.custom_label ?? updatedAddress.label,
+            addressLine: `${updatedAddress.city}, ${updatedAddress.state} ${updatedAddress.pincode}`,
+            latitude: updatedAddress.latitude ?? null,
+            longitude: updatedAddress.longitude ?? null,
+            addressId: updatedAddress.id,
+          });
+        }
       } else {
-        await createAddress(payload);
+        const createdAddress = (await createAddress(payload)) as unknown as Address;
+        
+        // Dynamic Bridge: Auto-select newly created address instantly on return to cart
+        if (createdAddress) {
+          useDeliveryLocationStore.getState().selectAddress({
+            source: 'saved',
+            area: createdAddress.custom_label ?? createdAddress.label,
+            addressLine: `${createdAddress.city}, ${createdAddress.state} ${createdAddress.pincode}`,
+            latitude: createdAddress.latitude ?? null,
+            longitude: createdAddress.longitude ?? null,
+            addressId: createdAddress.id,
+          });
+        }
       }
       router.back();
     } catch (error) {
