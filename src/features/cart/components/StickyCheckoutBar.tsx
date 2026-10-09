@@ -77,10 +77,7 @@ export function StickyCheckoutBar({
       // Execute the order placement (supporting both synchronous and asynchronous actions)
       await onPlaceOrder();
     } catch (error) {
-      console.warn(
-        "⚠️ [Cart Checkout] Place Order failed.",
-        error,
-      );
+      console.warn("⚠️ [Cart Checkout] Place Order failed.", error);
     } finally {
       // Always unlock the button so cancellations, alerts, or failures restore interactivity
       setLocalPlacing(false);
@@ -154,9 +151,32 @@ export function StickyCheckoutBar({
               >
                 {grandTotal > 0 ? `₹${grandTotal.toFixed(2)}` : "—"}
               </Text>
-              <Text style={[styles.totalLabel, { color: colors.text.muted }]}>
-                incl. all charges
-              </Text>
+              {(() => {
+                const totalSavings =
+                  (breakdown?.platform_savings ?? 0) +
+                  (breakdown?.coupon_discount ?? 0) +
+                  (breakdown?.loyalty_discount ?? 0);
+
+                if (totalSavings > 0) {
+                  return (
+                    <Text
+                      style={[
+                        styles.savingsLabel,
+                        { color: colors.status.success },
+                      ]}
+                    >
+                      Saved ₹{totalSavings.toFixed(2)}!
+                    </Text>
+                  );
+                }
+                return (
+                  <Text
+                    style={[styles.totalLabel, { color: colors.text.muted }]}
+                  >
+                    incl. all charges
+                  </Text>
+                );
+              })()}
             </>
           )}
         </View>
@@ -250,5 +270,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_700Bold",
     color: "#ffffff",
+  },
+    savingsLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
   },
 });

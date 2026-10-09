@@ -7,8 +7,11 @@ import type { CheckoutPatient } from '../types/auth';
 export interface PriceBreakdown {
   subtotal:                 number;
   service_charge:           number;
-  delivery_fee:             number;
-  km_surcharge:             number;
+  service_charge_anchor?:   number | null; // Cosmetic anchor for service charge
+  delivery_fee:             number;        // Replaces base delivery fee
+  delivery_charge_anchor?:  number | null; // Cosmetic anchor for delivery charge
+  km_surcharge:             number;        // Kept 0 for new orders, legacy compatibility
+  platform_savings?:        number;        // Total platform-side savings
   tip:                      number;
   coupon_code:              string | null;
   coupon_discount:          number;

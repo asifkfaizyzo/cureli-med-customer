@@ -484,10 +484,10 @@ export function CartScreen() {
 
           <BillDetailsCard />
 
-          <DeliveryInstructionCard
+          {/* <DeliveryInstructionCard
             selected={selectedInstructions}
             onToggle={handleToggleInstruction}
-          />
+          /> */}
         </ScrollView>
 
         {isQuoteLoading && (

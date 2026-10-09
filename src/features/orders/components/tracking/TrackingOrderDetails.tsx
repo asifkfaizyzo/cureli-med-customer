@@ -1,4 +1,4 @@
-// src/features/orders/components/tracking/TrackingOrderDetails.tsx
+// src/features/orders/components/tracking/TrackingOrderDetails.tsx (do not remove this comment)
 //
 // Expandable section revealed when the user pulls the sheet to 72%+.
 // Shows: patient tag, prescription thumbnails, medicine items list,
@@ -28,10 +28,22 @@ export function TrackingOrderDetails({ order }: TrackingOrderDetailsProps) {
   const hasLoyalty =
     (order.loyalty_points_redeemed ?? 0) > 0 &&
     (order.loyalty_discount_amount ?? 0) > 0;
+  
   const hasServiceCharge = (order.service_charge ?? 0) > 0;
-  const hasDeliveryFee = (order.delivery_fee ?? 0) > 0;
-  const hasKmSurcharge = (order.km_surcharge ?? 0) > 0;
+  // ── Merge delivery_fee + km_surcharge for consistent display ──
+  const combinedDelivery = parseFloat(
+    ((order.delivery_fee ?? 0) + (order.km_surcharge ?? 0)).toFixed(2),
+  );
+  const hasDeliveryFee = combinedDelivery > 0;
   const hasTip = (order.tip ?? 0) > 0;
+
+  // ── Slash Display Anchors ────────────────────────────────────
+  const serviceAnchor = order.service_charge_anchor ?? null;
+  const deliveryAnchor = order.delivery_charge_anchor ?? null;
+  const platformSavings = order.platform_savings ?? 0;
+  const isServiceFree = (order.service_charge ?? 0) === 0 && serviceAnchor != null;
+  const isDeliveryFree = combinedDelivery === 0 && deliveryAnchor != null;
+  
   const isForSomeone =
     order.patient_is_self === false && order.patient_name_snapshot;
 
@@ -159,25 +171,30 @@ export function TrackingOrderDetails({ order }: TrackingOrderDetailsProps) {
             highlight={colors.status.success}
           />
         )}
-        {hasServiceCharge && (
+        {(hasServiceCharge || isServiceFree) && (
           <PriceRow
             label="Service Charge"
-            value={formatCurrency(order.service_charge!)}
+            value={isServiceFree ? "FREE" : formatCurrency(order.service_charge!)}
+            anchorValue={serviceAnchor ? formatCurrency(serviceAnchor) : null}
             colors={colors}
+            highlight={isServiceFree ? colors.status.success : undefined}
           />
         )}
-        {hasDeliveryFee && (
+        {(hasDeliveryFee || isDeliveryFree) && (
           <PriceRow
             label="Delivery Fee"
-            value={formatCurrency(order.delivery_fee!)}
+            value={isDeliveryFree ? "FREE" : formatCurrency(combinedDelivery)}
+            anchorValue={deliveryAnchor ? formatCurrency(deliveryAnchor) : null}
             colors={colors}
+            highlight={isDeliveryFree ? colors.status.success : undefined}
           />
         )}
-        {hasKmSurcharge && (
+        {platformSavings > 0 && (
           <PriceRow
-            label="Distance Surcharge"
-            value={formatCurrency(order.km_surcharge!)}
+            label="Platform Promo Savings"
+            value={`-${formatCurrency(platformSavings)}`}
             colors={colors}
+            highlight={colors.status.success}
           />
         )}
         {hasTip && (
@@ -196,6 +213,20 @@ export function TrackingOrderDetails({ order }: TrackingOrderDetailsProps) {
           colors={colors}
           bold
         />
+        {isDeliveryFree && (
+          <View style={styles.promoNotice}>
+            <Text style={[styles.promoText, { color: colors.status.success }]}>
+              🎉 You earned free delivery on this order!
+            </Text>
+          </View>
+        )}
+        {isServiceFree && (
+          <View style={styles.promoNotice}>
+            <Text style={[styles.promoText, { color: colors.status.success }]}>
+              🎉 Platform fee was waived for this order!
+            </Text>
+          </View>
+        )}
         {order.loyalty_points_earned != null && order.loyalty_points_earned > 0 && (
           <View style={styles.earnedRow}>
             <Ionicons name="gift-outline" size={13} color={colors.status.success} />
@@ -266,12 +297,14 @@ function Section({
 function PriceRow({
   label,
   value,
+  anchorValue,
   colors,
   bold,
   highlight,
 }: {
   label: string;
   value: string;
+  anchorValue?: string | null;
   colors: any;
   bold?: boolean;
   highlight?: string;
@@ -289,17 +322,24 @@ function PriceRow({
       >
         {label}
       </Text>
-      <Text
-        style={[
-          styles.priceValue,
-          {
-            color: highlight || (bold ? colors.text.primary : colors.text.secondary),
-            fontFamily: bold ? 'Inter_700Bold' : 'Inter_500Medium',
-          },
-        ]}
-      >
-        {value}
-      </Text>
+      <View style={styles.priceValueContainer}>
+        {anchorValue && (
+          <Text style={[styles.priceAnchor, { color: colors.text.faint }]}>
+            {anchorValue}
+          </Text>
+        )}
+        <Text
+          style={[
+            styles.priceValue,
+            {
+              color: highlight || (bold ? colors.text.primary : colors.text.secondary),
+              fontFamily: bold ? 'Inter_700Bold' : 'Inter_500Medium',
+            },
+          ]}
+        >
+          {value}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -404,6 +444,16 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: 13,
   },
+  priceValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  priceAnchor: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    textDecorationLine: 'line-through',
+  },
   priceValue: {
     fontSize: 13,
   },
@@ -444,5 +494,13 @@ const styles = StyleSheet.create({
   supportText: {
     fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
+  },
+  promoNotice: {
+    marginTop: 4,
+  },
+  promoText: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    textAlign: 'center',
   },
 });

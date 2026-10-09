@@ -508,15 +508,35 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     () => (order ? safeNum(order.service_charge) : null),
     [order],
   );
-  const billDeliveryFee = useMemo(
-    () => (order ? safeNum(order.delivery_fee) : null),
-    [order],
-  );
-  const billKmSurcharge = useMemo(
-    () => (order ? safeNum(order.km_surcharge) : null),
-    [order],
-  );
+
+  // ── Merge delivery_fee + km_surcharge for consistent display ──
+  // New orders: delivery_fee already includes km, km_surcharge = 0.
+  // Legacy orders: km_surcharge may be > 0, so we merge.
+  const billDeliveryFee = useMemo(() => {
+    if (!order) return null;
+    const delivery = safeNum(order.delivery_fee) ?? 0;
+    const km = safeNum(order.km_surcharge) ?? 0;
+    return parseFloat((delivery + km).toFixed(2));
+  }, [order]);
+
   const billTip = useMemo(() => (order ? safeNum(order.tip) : null), [order]);
+
+  // ── Slash Display Anchors ────────────────────────────────────
+  const billServiceAnchor = useMemo(
+    () => (order ? safeNum(order.service_charge_anchor) : null),
+    [order],
+  );
+  const billDeliveryAnchor = useMemo(
+    () => (order ? safeNum(order.delivery_charge_anchor) : null),
+    [order],
+  );
+  const billPlatformSavings = useMemo(
+    () => (order ? safeNum(order.platform_savings) : null),
+    [order],
+  );
+
+  const isServiceFree = billServiceCharge === 0 && billServiceAnchor != null;
+  const isDeliveryFree = billDeliveryFee === 0 && billDeliveryAnchor != null;
 
   const billGrandTotal = useMemo(() => {
     if (!order) return 0;
@@ -528,14 +548,13 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
   const billOtherCharges = useMemo(() => {
     const hasBreakdown =
       billServiceCharge != null ||
-      billDeliveryFee != null ||
-      billKmSurcharge != null;
+      billDeliveryFee != null;
     if (hasBreakdown) return null;
     const knownTotal = safeNum(order?.grand_total) ?? safeNum(order?.total_amount);
     if (knownTotal == null) return null;
     const gap = knownTotal - billSubtotal;
     return gap > 0.01 ? gap : null;
-  }, [order, billSubtotal, billServiceCharge, billDeliveryFee, billKmSurcharge]);
+  }, [order, billSubtotal, billServiceCharge, billDeliveryFee]);
 
   // ── 1. Branded Loading State (No Flash) ────────────────────────
   if (isLoading) {
@@ -925,26 +944,31 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
               label="Items subtotal"
               value={formatCurrency(billSubtotal)}
             />
-            {billServiceCharge != null && billServiceCharge > 0 && (
+            {billServiceCharge != null && (billServiceCharge > 0 || isServiceFree) && (
               <PriceRow
                 label="Service charge"
-                value={formatCurrency(billServiceCharge)}
+                value={isServiceFree ? "FREE" : formatCurrency(billServiceCharge)}
+                anchorValue={billServiceAnchor ? formatCurrency(billServiceAnchor) : null}
+                isFree={isServiceFree}
               />
             )}
-            {billDeliveryFee != null && billDeliveryFee > 0 && (
+            {billDeliveryFee != null && (billDeliveryFee > 0 || isDeliveryFree) && (
               <PriceRow
                 label="Delivery fee"
-                value={formatCurrency(billDeliveryFee)}
-              />
-            )}
-            {billKmSurcharge != null && billKmSurcharge > 0 && (
-              <PriceRow
-                label="Distance surcharge"
-                value={formatCurrency(billKmSurcharge)}
+                value={isDeliveryFree ? "FREE" : formatCurrency(billDeliveryFee)}
+                anchorValue={billDeliveryAnchor ? formatCurrency(billDeliveryAnchor) : null}
+                isFree={isDeliveryFree}
               />
             )}
             {billTip != null && billTip > 0 && (
               <PriceRow label="Tip" value={formatCurrency(billTip)} />
+            )}
+            {billPlatformSavings != null && billPlatformSavings > 0 && (
+              <PriceRow
+                label="Platform Promo Savings"
+                value={`-${formatCurrency(billPlatformSavings)}`}
+                isDiscount
+              />
             )}
             {billOtherCharges != null && billOtherCharges > 0 && (
               <PriceRow
@@ -971,6 +995,22 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
                 />
               </View>
             </View>
+
+            {/* Promotional notes for free fees */}
+            {isDeliveryFree && (
+              <View style={[styles.promoNotice, { backgroundColor: colors.status.successBg }]}>
+                <Text style={[styles.promoNoticeText, { color: colors.status.success }]}>
+                  🎉 You earned free delivery on this order!
+                </Text>
+              </View>
+            )}
+            {isServiceFree && (
+              <View style={[styles.promoNotice, { backgroundColor: colors.status.successBg }]}>
+                <Text style={[styles.promoNoticeText, { color: colors.status.success }]}>
+                  🎉 Platform fee was waived for this order!
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -1690,6 +1730,17 @@ const styles = StyleSheet.create({
   },
   timelineBy: { fontSize: 11, textTransform: "capitalize" },
   timelineReason: { fontSize: 12, lineHeight: 16, marginTop: 2 },
+  promoNotice: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  promoNoticeText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textAlign: "center",
+  },
   bottomPad: { height: 80 },
   stickyBar: {
     borderTopWidth: 1,

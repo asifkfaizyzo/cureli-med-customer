@@ -1,4 +1,3 @@
-// src/features/cart/components/BillDetailsCard.tsx (do not remove this comment)
 // src/features/cart/components/BillDetailsCard.tsx
 
 import React from 'react';
@@ -12,6 +11,7 @@ const TIP_PRESETS = [0, 10, 20, 50];
 function BillRow({
   label,
   value,
+  anchorValue = null,
   isTotal = false,
   isFree = false,
   dim = false,
@@ -19,6 +19,7 @@ function BillRow({
 }: {
   label:    string;
   value:    string;
+  anchorValue?: string | null;
   isTotal?: boolean;
   isFree?:  boolean;
   dim?:     boolean;
@@ -33,12 +34,20 @@ function BillRow({
       ]}>
         {label}
       </Text>
-      <Text style={[
-        isTotal ? styles.totalValue : styles.value,
-        { color: isDiscount || isFree ? colors.status.success : colors.text.primary },
-      ]}>
-        {value}
-      </Text>
+      
+      <View style={styles.valueContainer}>
+        {anchorValue && (
+          <Text style={[styles.anchorValue, { color: colors.text.faint }]}>
+            {anchorValue}
+          </Text>
+        )}
+        <Text style={[
+          isTotal ? styles.totalValue : styles.value,
+          { color: isDiscount || isFree ? colors.status.success : colors.text.primary },
+        ]}>
+          {value}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -58,11 +67,18 @@ export function BillDetailsCard() {
 
   if (!breakdown) return null;
 
+  // ── Combine delivery charges for legacy compatibility & visual merge ──
+  const combinedDelivery = breakdown.delivery_fee + (breakdown.km_surcharge || 0);
+
+  // Check if either platform fee is free (actual is 0 but we have a slash)
+  const isDeliveryFree = combinedDelivery === 0 && !!breakdown.delivery_charge_anchor;
+  const isServiceFree = breakdown.service_charge === 0 && !!breakdown.service_charge_anchor;
+
   return (
     <View style={[styles.card, { backgroundColor: colors.background.card }]}>
       <Text style={[styles.title, { color: colors.text.primary }]}>Bill details</Text>
 
-      <BillRow label="Items total"    value={`₹${breakdown.subtotal.toFixed(2)}`} />
+      <BillRow label="Items total" value={`₹${breakdown.subtotal.toFixed(2)}`} />
       
       {/* ── Coupons ── */}
       {breakdown.coupon_discount > 0 && (
@@ -74,11 +90,29 @@ export function BillDetailsCard() {
         <BillRow label={`Loyalty Points (-${breakdown.loyalty_points_redeemed} pts)`} value={`-₹${breakdown.loyalty_discount.toFixed(2)}`} isDiscount />
       )}
 
-      <BillRow label="Service charge" value={`₹${breakdown.service_charge.toFixed(2)}`} />
-      <BillRow label="Delivery fee"   value={`₹${breakdown.delivery_fee.toFixed(2)}`} />
+      {/* ── Service Charge Row ── */}
+      <BillRow 
+        label="Service charge" 
+        value={isServiceFree ? "FREE" : `₹${breakdown.service_charge.toFixed(2)}`} 
+        anchorValue={breakdown.service_charge_anchor ? `₹${breakdown.service_charge_anchor.toFixed(2)}` : null}
+        isFree={isServiceFree}
+      />
 
-      {breakdown.km_surcharge > 0 && (
-        <BillRow label="Distance surcharge" value={`₹${breakdown.km_surcharge.toFixed(2)}`} />
+      {/* ── Merged Delivery Row ── */}
+      <BillRow 
+        label="Delivery fee" 
+        value={isDeliveryFree ? "FREE" : `₹${combinedDelivery.toFixed(2)}`} 
+        anchorValue={breakdown.delivery_charge_anchor ? `₹${breakdown.delivery_charge_anchor.toFixed(2)}` : null}
+        isFree={isDeliveryFree}
+      />
+
+      {/* ── Platform Savings Row ── */}
+      {breakdown.platform_savings !== undefined && breakdown.platform_savings > 0 && (
+        <BillRow 
+          label="Platform Promo Savings" 
+          value={`-₹${breakdown.platform_savings.toFixed(2)}`} 
+          isDiscount 
+        />
       )}
 
       {/* ── Tip selector ── */}
@@ -119,6 +153,23 @@ export function BillDetailsCard() {
         value={`₹${breakdown.grand_total.toFixed(2)}`}
         isTotal
       />
+
+      {/* ── Promotional Earning Badges ── */}
+      {isDeliveryFree && (
+        <View style={[styles.promoNotice, { backgroundColor: colors.status.successBg }]}>
+          <Text style={[styles.promoNoticeText, { color: colors.status.success }]}>
+            🎉 You earned free delivery on this order!
+          </Text>
+        </View>
+      )}
+
+      {isServiceFree && (
+        <View style={[styles.promoNotice, { backgroundColor: colors.status.successBg, marginTop: 6 }]}>
+          <Text style={[styles.promoNoticeText, { color: colors.status.success }]}>
+            🎉 Platform fee waived for this order!
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -151,6 +202,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
+  },
+  valueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  anchorValue: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    textDecorationLine: 'line-through',
   },
   label: {
     fontSize: 13,
@@ -190,5 +251,16 @@ const styles = StyleSheet.create({
   tipBtnText: {
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
+  },
+  promoNotice: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: Spacing.xs,
+  },
+  promoNoticeText: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    textAlign: 'center',
   },
 });

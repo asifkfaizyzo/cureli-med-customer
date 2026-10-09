@@ -87,11 +87,16 @@ export interface MobileOrderDetail {
 
   total_amount: number;
   subtotal: number;
-  service_charge?: number | null;
+    service_charge?: number | null;
   delivery_fee?: number | null;
   km_surcharge?: number | null;
   tip?: number | null;
   grand_total?: number | null;
+
+  // ── Slash Display Anchors (null = no slash on this order) ──
+  service_charge_anchor?: number | null;
+  delivery_charge_anchor?: number | null;
+  platform_savings?: number | null;
 
   // ── Coupon & Loyalty ──────────────────────────────────────────
   coupon_code?: string | null;
