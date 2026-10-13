@@ -12,6 +12,7 @@ import { useOrderNotificationStore } from '../store/orderNotificationStore';
 import { useAuthStore } from '../store/authStore';
 import { useBranchStatusStore } from '../store/branchStatusStore';
 import { useLiveTrackingStore } from '../store/liveTrackingStore';
+import { useNotificationStore } from '../store/notificationStore';
 import { prescriptionRequestKeys } from '../features/prescription-request/hooks/usePrescriptionRequest';
 
 // ── Custom SSE event names this hook subscribes to ────────────────────────────
@@ -22,7 +23,8 @@ type SSEEvents =
   | 'branch_status_changed'
   | 'prescription_quote_received'
   | 'delivery_update'
-  | 'rider_location_update';
+  | 'rider_location_update'
+  | 'new_notification';
 
 const INITIAL_BACKOFF_MS = 2_000;
 const MAX_BACKOFF_MS     = 30_000;
@@ -32,6 +34,8 @@ export function useMobileSSE() {
   const setLastStatusUpdate   = useOrderNotificationStore((s) => s.setLastStatusUpdate);
   const setBranchStatusUpdate = useBranchStatusStore((s) => s.setBranchStatusUpdate);
   const setRiderLocation      = useLiveTrackingStore((s) => s.setRiderLocation);
+  const incrementUnread       = useNotificationStore((s) => s.incrementUnread);
+  const setUnreadCount        = useNotificationStore((s) => s.setUnreadCount);
 
   const queryClient = useQueryClient();
 
@@ -183,6 +187,23 @@ export function useMobileSSE() {
       }
     });
 
+    // ── New notification (promotions & system messages) ──────────────────
+    // Fired when a broadcast or system notification is created for this user.
+    // Updates the bell badge count in real-time without a full refetch.
+    es.addEventListener('new_notification', (event: CustomEvent<'new_notification'>) => {
+      if (!event.data) return;
+      try {
+        const data = JSON.parse(event.data);
+        if (typeof data.unread_count === 'number') {
+          setUnreadCount(data.unread_count);
+        } else {
+          incrementUnread();
+        }
+      } catch {
+        // Malformed payload — ignore
+      }
+    });
+
     // ── Error: reconnect with backoff ─────────────────────────────────────
     es.addEventListener('error', () => {
       if (!isMountedRef.current) return;
@@ -197,7 +218,7 @@ export function useMobileSSE() {
         if (isMountedRef.current) connect();
       }, delay);
     });
-  }, [status, setLastStatusUpdate, setBranchStatusUpdate, queryClient, setRiderLocation]);
+  }, [status, setLastStatusUpdate, setBranchStatusUpdate, queryClient, setRiderLocation, incrementUnread, setUnreadCount]);
 
   // ── Mount / unmount ───────────────────────────────────────────────────────
   useEffect(() => {

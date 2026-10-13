@@ -194,6 +194,9 @@ export function HomeScreen() {
   const handlePressCart = useCallback(() => {
     router.push("/cart" as any);
   }, []);
+  const handlePressNotifications = useCallback(() => {
+    router.push("/notifications" as any);
+  }, []);
   const handlePressViewAll = useCallback(() => {
     router.push("/marketplace/categories" as any);
   }, []);
@@ -214,6 +217,7 @@ export function HomeScreen() {
     <GradientHeader
       onPressSearch={handlePressSearch}
       onPressCart={handlePressCart}
+      onPressNotifications={handlePressNotifications}
     />
   );
 
