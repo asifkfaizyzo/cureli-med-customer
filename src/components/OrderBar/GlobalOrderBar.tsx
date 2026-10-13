@@ -123,18 +123,53 @@ export function GlobalOrderBar() {
     if (!orders || !Array.isArray(orders)) return null;
 
     const found = orders.find((order: MobileOrderSummary) => {
+      // 1. If user manually dismissed it on this device, hide it.
       if (dismissedOrderIds[order.order_id]) return false;
-      if (["PLACED", "ACCEPTED", "READY_FOR_PICKUP"].includes(order.status))
+
+      const oStatus = order.status;
+      const dStatus = order.delivery_status;
+
+      // 2. ACTIVE STATES: Always show (Placed, Accepted, Ready, or Rider En-Route)
+      if (["PLACED", "ACCEPTED", "READY_FOR_PICKUP"].includes(oStatus))
         return true;
       if (
-        order.status === "COMPLETED" &&
-        order.delivery_status &&
-        !["DELIVERED", "FAILED", "CANCELLED"].includes(order.delivery_status)
-      )
+        oStatus === "COMPLETED" &&
+        dStatus &&
+        !["DELIVERED", "FAILED", "CANCELLED"].includes(dStatus)
+      ) {
         return true;
-      if (["CANCELLED", "REJECTED"].includes(order.status)) return true;
-      if (order.status === "COMPLETED" && order.delivery_status === "DELIVERED")
+      }
+
+      // 3. TERMINAL STATES (Completed, Cancelled, Rejected, Failed)
+      const isTerminal =
+        ["CANCELLED", "REJECTED"].includes(oStatus) ||
+        (oStatus === "COMPLETED" && dStatus === "DELIVERED") ||
+        (oStatus === "COMPLETED" && dStatus === "FAILED");
+
+      if (isTerminal) {
+        // Get the timestamp of when it became terminal
+        const terminalDateStr =
+          order.completed_at ||
+          order.cancelled_at ||
+          order.rejected_at ||
+          order.placed_at; // Fallback just in case
+
+        if (terminalDateStr) {
+          const terminalTime = new Date(terminalDateStr).getTime();
+          const now = Date.now();
+          const hoursSinceTerminal = (now - terminalTime) / (1000 * 60 * 60);
+
+          // If the order reached its terminal state more than 12 hours ago,
+          // automatically hide it (prevents old orders popping up on fresh install).
+          if (hoursSinceTerminal > 12) {
+            return false;
+          }
+        }
+
+        // It's a recently finished order (< 12 hrs), show it so they can see the final status
         return true;
+      }
+
       return false;
     });
 
@@ -747,11 +782,7 @@ export function GlobalOrderBar() {
           <View style={styles.fabIconStack}>
             <Animated.View style={statusIconStyle}>
               <Animated.View style={iconAnimatedStyle}>
-                <Ionicons
-                  name={statusConfig.icon}
-                  size={20}
-                  color="#FFFFFF"
-                />
+                <Ionicons name={statusConfig.icon} size={20} color="#FFFFFF" />
               </Animated.View>
             </Animated.View>
 
