@@ -3,12 +3,15 @@
 
 import { api } from "../../../services/api";
 
+import type { FulfillmentType } from "../../../types/order";
+
 export const ordersApi = {
   placeOrder: (data: {
     branch_id: string;
-    delivery_address_id: string;
+    delivery_address_id?: string | null;
     items: { variantId: string; quantity: number }[];
     notes?: string;
+    fulfillment_type?: FulfillmentType;
     prescription_files?: {
       prescription_key: string;
       original_name: string;
@@ -17,13 +20,24 @@ export const ordersApi = {
     }[];
   }) => api.post("/mobile/orders", data),
 
-  getOrders: (params?: { page?: number; limit?: number }) =>
-    api.get("/mobile/orders", { params }),
+  getOrders: (params?: {
+    page?: number;
+    limit?: number;
+    fulfillment_type?: FulfillmentType;
+  }) => api.get("/mobile/orders", { params }),
 
   getOrderDetail: (orderId: string) => api.get(`/mobile/orders/${orderId}`),
 
   cancelOrder: (orderId: string) =>
     api.post(`/mobile/orders/${orderId}/cancel`),
+
+  /**
+   * POST /mobile/orders/:orderId/confirm-pickup
+   * Customer-initiated pickup confirmation (self-service).
+   * Idempotent — safe to retry. Backend transitions order to COMPLETED.
+   */
+  confirmPickup: (orderId: string) =>
+    api.post(`/mobile/orders/${orderId}/confirm-pickup`),
 
   uploadPrescriptions: (formData: FormData) =>
     api.post("/mobile/prescriptions/upload", formData, {

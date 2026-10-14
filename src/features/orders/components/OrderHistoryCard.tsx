@@ -8,9 +8,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../theme/ThemeContext";
 import { RemoteImage } from "../../../components/RemoteImage";
 import {
+  getFulfillmentLabel,
   getStatusLabel,
+  getStatusLabelForFulfillment,
   getStatusColorKey,
   getStatusIcon,
+  getStatusIconForFulfillment,
   getRejectionLabel,
   formatDeliveryDate,
   type StatusColorKey,
@@ -132,10 +135,15 @@ export function OrderHistoryCard({
 
   const colorKey = isRefunded ? "success" : getStatusColorKey(order.status);
   const { fg, bg } = resolveStatusColors(colorKey, colors);
+  const isPickup = order.fulfillment_type === "PICKUP";
   const iconName = (
-    isRefunded ? "refresh-circle-outline" : getStatusIcon(order.status)
+    isRefunded
+      ? "refresh-circle-outline"
+      : getStatusIconForFulfillment(order.status, order.fulfillment_type)
   ) as any;
-  const statusLabel = isRefunded ? "Refunded" : getStatusLabel(order.status);
+  const statusLabel = isRefunded
+    ? "Refunded"
+    : getStatusLabelForFulfillment(order.status, order.fulfillment_type);
   // ────────────────────────────────────────────────────────────────────────
 
   const visibleItems = order.items.slice(0, MAX_VISIBLE_ITEMS);
@@ -162,16 +170,44 @@ export function OrderHistoryCard({
       {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.topLeft}>
-          <View style={[styles.statusBadge, { backgroundColor: bg }]}>
-            <Ionicons name={iconName} size={13} color={fg} />
-            <Text
+          <View style={styles.badgesRow}>
+            <View style={[styles.statusBadge, { backgroundColor: bg }]}>
+              <Ionicons name={iconName} size={13} color={fg} />
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: fg, fontFamily: "Inter_600SemiBold" },
+                ]}
+              >
+                {statusLabel}
+              </Text>
+            </View>
+            <View
               style={[
-                styles.statusText,
-                { color: fg, fontFamily: "Inter_600SemiBold" },
+                styles.fulfillmentTag,
+                {
+                  backgroundColor: isPickup
+                    ? colors.status.warningBg
+                    : colors.background.tint,
+                },
               ]}
             >
-              {statusLabel}
-            </Text>
+              <Ionicons
+                name={isPickup ? "storefront-outline" : "bicycle-outline"}
+                size={10}
+                color={isPickup ? colors.status.warning : colors.text.muted}
+              />
+              <Text
+                style={[
+                  styles.fulfillmentTagText,
+                  {
+                    color: isPickup ? colors.status.warning : colors.text.muted,
+                  },
+                ]}
+              >
+                {getFulfillmentLabel(order.fulfillment_type)}
+              </Text>
+            </View>
           </View>
           <Text
             style={[
@@ -327,6 +363,19 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   topLeft: { flex: 1, gap: 4 },
+  badgesRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  fulfillmentTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  fulfillmentTagText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+  },
   centre: { alignItems: "center", justifyContent: "center", gap: 6 },
   statusBadge: {
     flexDirection: "row",

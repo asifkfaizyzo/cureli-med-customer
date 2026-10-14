@@ -38,17 +38,21 @@ import type {
   MobileOrderDetail,
   MobileOrderPrescription,
   ReorderItemsResponse,
+  FulfillmentType,
 } from "../../../types/order";
 import { ordersApi } from "../../marketplace/api/orders.api";
 import { PriceRow } from "../components/PriceRow";
 import { ReorderSheet } from "../components/ReorderSheet";
 import {
   formatDeliveryDate,
+  getFulfillmentLabel,
   getRejectionLabel,
   getStatusColorKey,
   getStatusColors,
   getStatusIcon,
+  getStatusIconForFulfillment,
   getStatusLabel,
+  getStatusLabelForFulfillment,
   type StatusColorKey,
 } from "../constants/orders.constants";
 import { ActiveTrackingScreen } from "./ActiveTrackingScreen";
@@ -535,8 +539,17 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     [order],
   );
 
+  const isPickupOrder = order?.fulfillment_type === "PICKUP";
+
   const isServiceFree = billServiceCharge === 0 && billServiceAnchor != null;
-  const isDeliveryFree = billDeliveryFee === 0 && billDeliveryAnchor != null;
+  const isDeliveryFree =
+    isPickupOrder ||
+    (billDeliveryFee === 0 && billDeliveryAnchor != null);
+
+  const billPackingCharge = useMemo(
+    () => (order ? safeNum(order.packing_charge) : null),
+    [order],
+  );
 
   const billGrandTotal = useMemo(() => {
     if (!order) return 0;
@@ -587,10 +600,19 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     );
   }
 
+  // After null check, we can safely narrow the type
+  const isPickup = isPickupOrder;
+
   // ── 3. Smart Switchboard: Active orders → Live Tracking View ───
   const isOrderActive = !TERMINAL_STATUSES.has(order.status);
   if (isOrderActive) {
-    return <ActiveTrackingScreen order={order} onBack={() => router.back()} />;
+    return (
+      <ActiveTrackingScreen
+        order={order}
+        onBack={() => router.back()}
+        onOrderUpdate={fetchDetail}
+      />
+    );
   }
 
   // ── 4. Terminal Orders View (COMPLETED / CANCELLED / REJECTED) ──
@@ -601,9 +623,13 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     ? "success"
     : getStatusColorKey(order.status);
   const statusIcon = (
-    isRefunded ? "refresh-circle-outline" : getStatusIcon(order.status)
+    isRefunded
+      ? "refresh-circle-outline"
+      : getStatusIconForFulfillment(order.status, order.fulfillment_type)
   ) as any;
-  const statusLabel = isRefunded ? "Refunded" : getStatusLabel(order.status);
+  const statusLabel = isRefunded
+    ? "Refunded"
+    : getStatusLabelForFulfillment(order.status, order.fulfillment_type);
 
   const { fg: statusFg, bg: statusBg } = getStatusColors(colorKey, colors);
 
@@ -633,7 +659,11 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
       label: "Branch",
       value: order.branch_name ?? "—",
     },
-    { icon: "location-outline", label: "Delivery Address", value: addressLine },
+    {
+      icon: isPickup ? "storefront-outline" : "location-outline",
+      label: isPickup ? "Pickup Location" : "Delivery Address",
+      value: addressLine,
+    },
     {
       icon: "wallet-outline",
       label: "Payment",
@@ -734,16 +764,44 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
           ]}
         >
           <View style={styles.summaryHeader}>
-            <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
-              <Ionicons name={statusIcon} size={16} color={statusFg} />
-              <Text
+            <View style={styles.summaryBadgesRow}>
+              <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
+                <Ionicons name={statusIcon} size={16} color={statusFg} />
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    { color: statusFg, fontFamily: "Inter_700Bold" },
+                  ]}
+                >
+                  {statusLabel}
+                </Text>
+              </View>
+              <View
                 style={[
-                  styles.statusBadgeText,
-                  { color: statusFg, fontFamily: "Inter_700Bold" },
+                  styles.fulfillmentBadge,
+                  {
+                    backgroundColor: isPickup
+                      ? colors.status.warningBg
+                      : colors.background.tint,
+                  },
                 ]}
               >
-                {statusLabel}
-              </Text>
+                <Ionicons
+                  name={isPickup ? "storefront-outline" : "bicycle-outline"}
+                  size={12}
+                  color={isPickup ? colors.status.warning : colors.text.muted}
+                />
+                <Text
+                  style={[
+                    styles.fulfillmentBadgeText,
+                    {
+                      color: isPickup ? colors.status.warning : colors.text.muted,
+                    },
+                  ]}
+                >
+                  {getFulfillmentLabel(order.fulfillment_type)}
+                </Text>
+              </View>
             </View>
             <Text
               style={[
@@ -954,10 +1012,16 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
             )}
             {billDeliveryFee != null && (billDeliveryFee > 0 || isDeliveryFree) && (
               <PriceRow
-                label="Delivery fee"
+                label={isPickup ? "Delivery fee (Pickup)" : "Delivery fee"}
                 value={isDeliveryFree ? "FREE" : formatCurrency(billDeliveryFee)}
-                anchorValue={billDeliveryAnchor ? formatCurrency(billDeliveryAnchor) : null}
+                anchorValue={!isPickup && billDeliveryAnchor ? formatCurrency(billDeliveryAnchor) : null}
                 isFree={isDeliveryFree}
+              />
+            )}
+            {billPackingCharge != null && billPackingCharge > 0 && (
+              <PriceRow
+                label="Packing charge"
+                value={formatCurrency(billPackingCharge)}
               />
             )}
             {billTip != null && billTip > 0 && (
@@ -1148,10 +1212,10 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
               id: `status-${index}`,
               label: isCurrentStepRefund
                 ? "Refunded"
-                : getStatusLabel(entry.to_status),
+                : getStatusLabelForFulfillment(entry.to_status, order.fulfillment_type),
               icon: isCurrentStepRefund
                 ? "refresh-circle"
-                : (getStatusIcon(entry.to_status) as any),
+                : (getStatusIconForFulfillment(entry.to_status, order.fulfillment_type) as any),
               colorKey: isCurrentStepRefund
                 ? "success"
                 : getStatusColorKey(entry.to_status),
@@ -1619,6 +1683,19 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 15, marginBottom: 4 },
   summaryHeader: { gap: 6 },
+  summaryBadgesRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  fulfillmentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  fulfillmentBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",

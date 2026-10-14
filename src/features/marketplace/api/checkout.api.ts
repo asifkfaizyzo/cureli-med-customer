@@ -3,6 +3,7 @@
 
 import { api } from "../../../services/api";
 import type { CheckoutPatient } from "../../../types/auth";
+import type { FulfillmentType } from "../../../types/order";
 
 export const checkoutApi = {
   getQuote: (data: {
@@ -13,11 +14,12 @@ export const checkoutApi = {
     coupon_code?: string | null;
     loyalty_points_to_redeem?: number;
     customer_id?: string | null;
+    fulfillment_type?: FulfillmentType;
   }) => api.post("/mobile/checkout/quote", data),
 
   createSession: (data: {
     branch_id: string;
-    delivery_address_id: string;
+    delivery_address_id?: string | null;
     items: { variantId: string; quantity: number }[];
     distance_km: number;
     tip?: number;
@@ -32,6 +34,7 @@ export const checkoutApi = {
     prescription_recipient_id?: string | null;
     coupon_code?: string | null;
     loyalty_points_to_redeem?: number;
+    fulfillment_type?: FulfillmentType;
   }) => api.post("/mobile/checkout/create-session", data),
 
   confirm: (data: {

@@ -197,6 +197,13 @@ export function TrackingOrderDetails({ order }: TrackingOrderDetailsProps) {
             highlight={colors.status.success}
           />
         )}
+        {(order.packing_charge ?? 0) > 0 && (
+          <PriceRow
+            label="Packing Charge"
+            value={formatCurrency(order.packing_charge!)}
+            colors={colors}
+          />
+        )}
         {hasTip && (
           <PriceRow
             label="Tip"

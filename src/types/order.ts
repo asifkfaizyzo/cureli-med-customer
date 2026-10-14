@@ -9,6 +9,12 @@ export type MarketplaceOrderStatus =
   | "CANCELLED"
   | "REJECTED";
 
+export type FulfillmentType =
+  | "INSTANT_DELIVERY"
+  | "PICKUP"
+  | "SAME_DAY"
+  | "NEXT_DAY";
+
 export interface MobileOrderItem {
   item_id: string;
   medicine_name: string;
@@ -42,6 +48,7 @@ export interface MobileOrderSummary {
   order_id: string;
   order_number: string;
   status: MarketplaceOrderStatus;
+  fulfillment_type: FulfillmentType;
   delivery_status?: DeliveryStatus | null;
   shop_name: string | null;
   total_amount: number;
@@ -77,6 +84,7 @@ export interface MobileOrderDetail {
   order_id: string;
   order_number: string;
   status: MarketplaceOrderStatus;
+  fulfillment_type: FulfillmentType;
   shop_name: string | null;
   shop_phone: string | null;
   branch_name: string | null;
@@ -90,6 +98,7 @@ export interface MobileOrderDetail {
     service_charge?: number | null;
   delivery_fee?: number | null;
   km_surcharge?: number | null;
+  packing_charge?: number | null;
   tip?: number | null;
   grand_total?: number | null;
 

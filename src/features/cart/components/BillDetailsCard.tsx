@@ -1,5 +1,4 @@
-// src/features/cart/components/BillDetailsCard.tsx
-
+// src/features/cart/components/BillDetailsCard.tsx (do not remove this comment)
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -54,7 +53,7 @@ function BillRow({
 
 export function BillDetailsCard() {
   const { colors } = useTheme();
-  const { breakdown, isQuoteLoading, tip, setTip } = useCheckoutStore();
+  const { breakdown, isQuoteLoading, tip, setTip, fulfillmentType } = useCheckoutStore();
 
   if (!breakdown && isQuoteLoading) {
     return (
@@ -67,12 +66,18 @@ export function BillDetailsCard() {
 
   if (!breakdown) return null;
 
+  const isPickup = fulfillmentType === 'PICKUP';
+
   // ── Combine delivery charges for legacy compatibility & visual merge ──
   const combinedDelivery = breakdown.delivery_fee + (breakdown.km_surcharge || 0);
 
-  // Check if either platform fee is free (actual is 0 but we have a slash)
-  const isDeliveryFree = combinedDelivery === 0 && !!breakdown.delivery_charge_anchor;
+  // Pickup orders always show delivery as FREE
+  const isDeliveryFree =
+    isPickup ||
+    (combinedDelivery === 0 && !!breakdown.delivery_charge_anchor);
   const isServiceFree = breakdown.service_charge === 0 && !!breakdown.service_charge_anchor;
+
+  const packingCharge = breakdown.packing_charge || 0;
 
   return (
     <View style={[styles.card, { backgroundColor: colors.background.card }]}>
@@ -98,13 +103,21 @@ export function BillDetailsCard() {
         isFree={isServiceFree}
       />
 
-      {/* ── Merged Delivery Row ── */}
+      {/* ── Merged Delivery Row (always shown — FREE for pickup) ── */}
       <BillRow 
-        label="Delivery fee" 
+        label={isPickup ? "Delivery fee (Pickup)" : "Delivery fee"}
         value={isDeliveryFree ? "FREE" : `₹${combinedDelivery.toFixed(2)}`} 
-        anchorValue={breakdown.delivery_charge_anchor ? `₹${breakdown.delivery_charge_anchor.toFixed(2)}` : null}
+        anchorValue={!isPickup && breakdown.delivery_charge_anchor ? `₹${breakdown.delivery_charge_anchor.toFixed(2)}` : null}
         isFree={isDeliveryFree}
       />
+
+      {/* ── Packing Charge (only when > 0) ── */}
+      {packingCharge > 0 && (
+        <BillRow
+          label="Packing charge"
+          value={`₹${packingCharge.toFixed(2)}`}
+        />
+      )}
 
       {/* ── Platform Savings Row ── */}
       {breakdown.platform_savings !== undefined && breakdown.platform_savings > 0 && (
@@ -115,34 +128,36 @@ export function BillDetailsCard() {
         />
       )}
 
-      {/* ── Tip selector ── */}
-      <View style={styles.tipRow}>
-        <Text style={[styles.label, { color: colors.text.secondary }]}>Tip for rider</Text>
-        <View style={styles.tipOptions}>
-          {TIP_PRESETS.map((preset) => (
-            <TouchableOpacity
-              key={preset}
-              onPress={() => setTip(preset)}
-              style={[
-                styles.tipBtn,
-                {
-                  backgroundColor: tip === preset ? colors.brand.primary : colors.background.tint,
-                  borderColor:     tip === preset ? colors.brand.primary : colors.border.default,
-                },
-              ]}
-            >
-              <Text style={[
-                styles.tipBtnText,
-                { color: tip === preset ? '#fff' : colors.text.secondary },
-              ]}>
-                {preset === 0 ? 'None' : `₹${preset}`}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      {/* ── Tip selector (hidden for pickup — no rider) ── */}
+      {!isPickup && (
+        <View style={styles.tipRow}>
+          <Text style={[styles.label, { color: colors.text.secondary }]}>Tip for rider</Text>
+          <View style={styles.tipOptions}>
+            {TIP_PRESETS.map((preset) => (
+              <TouchableOpacity
+                key={preset}
+                onPress={() => setTip(preset)}
+                style={[
+                  styles.tipBtn,
+                  {
+                    backgroundColor: tip === preset ? colors.brand.primary : colors.background.tint,
+                    borderColor:     tip === preset ? colors.brand.primary : colors.border.default,
+                  },
+                ]}
+              >
+                <Text style={[
+                  styles.tipBtnText,
+                  { color: tip === preset ? '#fff' : colors.text.secondary },
+                ]}>
+                  {preset === 0 ? 'None' : `₹${preset}`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
-      {tip > 0 && (
+      {!isPickup && tip > 0 && (
         <BillRow label="Tip" value={`₹${tip.toFixed(2)}`} />
       )}
 

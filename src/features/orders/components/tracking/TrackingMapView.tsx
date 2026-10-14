@@ -119,10 +119,11 @@ export function TrackingMapView({ order }: TrackingMapViewProps) {
   const [showRecenter, setShowRecenter] = useState(false);
   const cachedLegRef = useRef<string | null>(null);
 
+  const isPickup = order.fulfillment_type === 'PICKUP';
   const delivery = order.delivery;
-  const rider = delivery?.rider;
-  const deliveryStatus = delivery?.status;
-  const activeLeg = getActiveLeg(deliveryStatus, !!rider);
+  const rider = isPickup ? null : delivery?.rider;
+  const deliveryStatus = isPickup ? undefined : delivery?.status;
+  const activeLeg = isPickup ? null : getActiveLeg(deliveryStatus, !!rider);
 
   // ── Coordinate resolution ────────────────────────────────────
   const pharmacyCoords = useMemo<LatLngPoint | null>(() => {

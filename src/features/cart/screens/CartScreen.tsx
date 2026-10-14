@@ -36,8 +36,10 @@ import {
   INSTRUCTIONS,
 } from "../components/DeliveryInstructionCard";
 import { DeliverySummaryCard } from "../components/DeliverySummaryCard";
+import { FulfillmentTypeSelector } from "../components/FulfillmentTypeSelector";
 import { PatientPickerSheet } from "../components/PatientPickerSheet";
 import { PatientSelectorCard } from "../components/PatientSelectorCard";
+import { PickupLocationCard } from "../components/PickupLocationCard";
 import { PrescriptionUploadCard } from "../components/PrescriptionUploadCard";
 import { RecommendationSection } from "../components/RecommendationSection";
 import { StickyCheckoutBar } from "../components/StickyCheckoutBar";
@@ -56,12 +58,14 @@ import { LoyaltyPointsSection } from "../components/LoyaltyPointsSection";
 
 interface OrderSuccessProps {
   orderId: string | null;
+  isPickup: boolean;
   onNavigateTracking: (orderId: string | null) => void;
   onGoHome: () => void;
 }
 
 function OrderSuccess({
   orderId,
+  isPickup,
   onNavigateTracking,
   onGoHome,
 }: OrderSuccessProps) {
@@ -129,8 +133,9 @@ function OrderSuccess({
           Order Placed!
         </Text>
         <Text style={[styles.successSub, { color: colors.text.muted }]}>
-          Your order has been sent to the pharmacy.{"\n"}
-          Connecting you to live tracking...
+          {isPickup
+            ? "Your order has been sent to the pharmacy.\nWe'll notify you when it's ready for pickup."
+            : "Your order has been sent to the pharmacy.\nConnecting you to live tracking..."}
         </Text>
 
         {/* Transition progress bar */}
@@ -274,6 +279,8 @@ export function CartScreen() {
 
   const selectedPatient = useCheckoutStore((s) => s.selectedPatient);
   const setSelectedPatient = useCheckoutStore((s) => s.setSelectedPatient);
+  const fulfillmentType = useCheckoutStore((s) => s.fulfillmentType);
+  const isPickup = fulfillmentType === "PICKUP";
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
@@ -308,6 +315,7 @@ export function CartScreen() {
 
   const [isSuccess, setIsSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [placedOrderIsPickup, setPlacedOrderIsPickup] = useState(false);
 
   const [selectedInstructions, setSelectedInstructions] = useState<string[]>(
     [],
@@ -354,12 +362,25 @@ export function CartScreen() {
   const userLat = location.latitude;
   const userLng = location.longitude;
 
-  const { distanceKm } = useDeliveryETA(userLat, userLng, branchLat, branchLng);
+  const { distanceKm, distanceText } = useDeliveryETA(
+    userLat,
+    userLng,
+    branchLat,
+    branchLng,
+  );
+
+  // For pickup orders, distance is irrelevant for pricing — pass 0 so useCheckout
+  // doesn't block the quote on missing coordinates.
+  const effectiveDistanceKm = isPickup ? 0 : distanceKm;
 
   const { placeOrder, isQuoteLoading } = useCheckout({
-    distanceKm,
+    distanceKm: effectiveDistanceKm,
     onSuccess: useCallback(
       (orderId?: string) => {
+        // Capture fulfillment type BEFORE the store resets
+        setPlacedOrderIsPickup(
+          useCheckoutStore.getState().fulfillmentType === "PICKUP",
+        );
         clearCart();
         clearPrescriptions();
         setSelectedInstructions([]);
@@ -378,6 +399,7 @@ export function CartScreen() {
       >
         <OrderSuccess
           orderId={placedOrderId}
+          isPickup={placedOrderIsPickup}
           onNavigateTracking={handleNavigateTracking}
           onGoHome={handleGoHome}
         />
@@ -465,7 +487,13 @@ export function CartScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <DeliveryAddressCard onChangePress={handleAddressPress} />
+          <FulfillmentTypeSelector />
+
+          {isPickup ? (
+            <PickupLocationCard distanceText={distanceText} />
+          ) : (
+            <DeliveryAddressCard onChangePress={handleAddressPress} />
+          )}
 
           <PatientSelectorCard
             patient={selectedPatient}

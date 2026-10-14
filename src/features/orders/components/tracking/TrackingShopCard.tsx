@@ -1,10 +1,12 @@
-// src/features/orders/components/tracking/TrackingShopCard.tsx
+// src/features/orders/components/tracking/TrackingShopCard.tsx (do not remove this comment)
 //
 // Slot D — Compact single-row pharmacy footer.
-// Shows pharmacy name, address (truncated gracefully), and call button.
+// Shows pharmacy name, address (truncated gracefully), and action buttons.
+// For instant delivery: Call button only.
+// For pickup: Call + Navigate buttons.
 
 import React, { useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Linking } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../../../../theme/ThemeContext';
@@ -12,17 +14,50 @@ import type { MobileOrderDetail } from '../../../../types/order';
 
 interface TrackingShopCardProps {
   order: MobileOrderDetail;
+  showNavigate?: boolean;
 }
 
-export function TrackingShopCard({ order }: TrackingShopCardProps) {
+function toNum(val: unknown): number | null {
+  if (val == null) return null;
+  const n = Number(val);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function TrackingShopCard({ order, showNavigate = false }: TrackingShopCardProps) {
   const { colors } = useTheme();
 
   const handleCall = useCallback(() => {
     if (order.shop_phone) Linking.openURL(`tel:${order.shop_phone}`);
   }, [order.shop_phone]);
 
+  const handleNavigate = useCallback(() => {
+    const lat = toNum(order.branch_latitude);
+    const lng = toNum(order.branch_longitude);
+    if (lat == null || lng == null) return;
+
+    const scheme = Platform.select({
+      ios: `comgooglemaps://?daddr=${lat},${lng}&directionsmode=driving`,
+      android: `google.navigation:q=${lat},${lng}&mode=d`,
+    });
+    const fallback = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+
+    if (!scheme) {
+      Linking.openURL(fallback);
+      return;
+    }
+
+    Linking.canOpenURL(scheme)
+      .then((supported) => {
+        if (supported) return Linking.openURL(scheme);
+        return Linking.openURL(fallback);
+      })
+      .catch(() => Linking.openURL(fallback));
+  }, [order.branch_latitude, order.branch_longitude]);
+
   const shopName = order.shop_name ?? order.branch_name ?? 'Pharmacy Partner';
   const address = order.branch_address;
+  const hasCoords =
+    toNum(order.branch_latitude) != null && toNum(order.branch_longitude) != null;
 
   return (
     <View
@@ -53,24 +88,45 @@ export function TrackingShopCard({ order }: TrackingShopCardProps) {
         ) : null}
       </View>
 
-      {order.shop_phone && (
-        <TouchableOpacity
-          style={[
-            styles.callBtn,
-            {
-              borderColor: colors.border.default,
-              backgroundColor: colors.background.card,
-            },
-          ]}
-          onPress={handleCall}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="call" size={12} color={colors.brand.primary} />
-          <Text style={[styles.callText, { color: colors.brand.primary }]}>
-            Call
-          </Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.actions}>
+        {showNavigate && hasCoords && (
+          <TouchableOpacity
+            style={[
+              styles.actionBtn,
+              {
+                borderColor: colors.border.default,
+                backgroundColor: colors.background.card,
+              },
+            ]}
+            onPress={handleNavigate}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="navigate" size={12} color={colors.brand.primary} />
+            <Text style={[styles.actionText, { color: colors.brand.primary }]}>
+              Go
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {order.shop_phone && (
+          <TouchableOpacity
+            style={[
+              styles.actionBtn,
+              {
+                borderColor: colors.border.default,
+                backgroundColor: colors.background.card,
+              },
+            ]}
+            onPress={handleCall}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="call" size={12} color={colors.brand.primary} />
+            <Text style={[styles.actionText, { color: colors.brand.primary }]}>
+              Call
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -97,7 +153,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Inter_400Regular',
   },
-  callBtn: {
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -106,7 +167,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
   },
-  callText: {
+  actionText: {
     fontSize: 11,
     fontFamily: 'Inter_700Bold',
   },

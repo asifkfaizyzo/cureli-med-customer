@@ -1,10 +1,12 @@
-// src/features/orders/components/tracking/TrackingDelayBanner.tsx
+// src/features/orders/components/tracking/TrackingDelayBanner.tsx (do not remove this comment)
 //
 // Dynamic, context-aware delay banner pinned at the top of the bottom sheet.
 // Detects which stage is delayed and shows the appropriate action:
-//   - Pharmacy delay → Call Pharmacy
-//   - Rider assignment delay → Contact Support
-//   - Rider transit delay → Call Rider
+//   - Pharmacy accept delay → Call Pharmacy
+//   - Preparation delay → Call Pharmacy
+//   - Rider assignment delay → Contact Support   (instant only)
+//   - Rider transit delay → Call Rider           (instant only)
+//   - Pickup-ready delay → Call Pharmacy         (pickup only)
 // Dismissible for the current session.
 
 import React, { useMemo, useState, useCallback } from 'react';
@@ -36,12 +38,14 @@ export function TrackingDelayBanner({ order }: TrackingDelayBannerProps) {
   const { colors } = useTheme();
   const [dismissed, setDismissed] = useState(false);
 
+  const isPickup = order.fulfillment_type === 'PICKUP';
+
   const delayConfig = useMemo<DelayConfig | null>(() => {
     const now = Date.now();
     const status = order.status;
     const ds = order.delivery?.status;
 
-    // 1. Pharmacy hasn't accepted yet
+    // 1. Pharmacy hasn't accepted yet (both instant + pickup)
     if (status === 'PLACED') {
       const elapsed = now - new Date(order.placed_at).getTime();
       if (elapsed > PHARMACY_ACCEPT_TIMEOUT && order.shop_phone) {
@@ -53,13 +57,18 @@ export function TrackingDelayBanner({ order }: TrackingDelayBannerProps) {
       }
     }
 
-    // 2. Preparation taking too long
-    if (status === 'ACCEPTED' && (!ds || ds === 'PENDING_ASSIGNMENT')) {
-      if (order.accepted_at) {
+    // 2. Preparation taking too long (both instant + pickup)
+    if (status === 'ACCEPTED') {
+      // Pickup: no delivery lifecycle, just check accepted_at
+      // Instant: only trigger when no rider assigned yet
+      const shouldCheck = isPickup || !ds || ds === 'PENDING_ASSIGNMENT';
+      if (shouldCheck && order.accepted_at) {
         const elapsed = now - new Date(order.accepted_at).getTime();
         if (elapsed > PREPARATION_TIMEOUT && order.shop_phone) {
           return {
-            message: 'Preparation is taking a bit longer than expected',
+            message: isPickup
+              ? 'Your order is taking longer than expected to be ready'
+              : 'Preparation is taking a bit longer than expected',
             actionLabel: 'Call Pharmacy',
             onAction: () => Linking.openURL(`tel:${order.shop_phone}`),
           };
@@ -67,49 +76,53 @@ export function TrackingDelayBanner({ order }: TrackingDelayBannerProps) {
       }
     }
 
-    // 3. Rider assignment delayed
-    if (status === 'READY_FOR_PICKUP' && (!ds || ds === 'PENDING_ASSIGNMENT')) {
-      if (order.ready_at) {
-        const elapsed = now - new Date(order.ready_at).getTime();
-        if (elapsed > RIDER_ASSIGN_TIMEOUT) {
-          return {
-            message: 'Finding a delivery partner is taking longer',
-            actionLabel: 'Contact Support',
-            onAction: () =>
-              router.push({
-                pathname: '/support/raise' as any,
-                params: {
-                  orderId: order.order_id,
-                  orderNumber: order.order_number,
-                },
-              }),
-          };
+    // ── Instant-only delay checks ──────────────────────────────
+    if (!isPickup) {
+      // 3. Rider assignment delayed
+      if (status === 'READY_FOR_PICKUP' && (!ds || ds === 'PENDING_ASSIGNMENT')) {
+        if (order.ready_at) {
+          const elapsed = now - new Date(order.ready_at).getTime();
+          if (elapsed > RIDER_ASSIGN_TIMEOUT) {
+            return {
+              message: 'Finding a delivery partner is taking longer',
+              actionLabel: 'Contact Support',
+              onAction: () =>
+                router.push({
+                  pathname: '/support/raise' as any,
+                  params: {
+                    orderId: order.order_id,
+                    orderNumber: order.order_number,
+                  },
+                }),
+            };
+          }
         }
       }
-    }
 
-    // 4. Rider notified but hasn't picked up in too long
-    if (
-      ds === 'RIDER_NOTIFIED' ||
-      ds === 'ACCEPTED' ||
-      ds === 'ARRIVED_AT_PHARMACY'
-    ) {
-      const assignedAt = order.delivery?.timestamps?.assigned_at;
-      if (assignedAt) {
-        const elapsed = now - new Date(assignedAt).getTime();
-        if (elapsed > RIDER_PICKUP_TIMEOUT && order.delivery?.rider?.phone) {
-          return {
-            message: 'Rider seems to be delayed at the pharmacy',
-            actionLabel: 'Call Rider',
-            onAction: () =>
-              Linking.openURL(`tel:${order.delivery!.rider!.phone}`),
-          };
+      // 4. Rider notified but hasn't picked up in too long
+      if (
+        ds === 'RIDER_NOTIFIED' ||
+        ds === 'ACCEPTED' ||
+        ds === 'ARRIVED_AT_PHARMACY'
+      ) {
+        const assignedAt = order.delivery?.timestamps?.assigned_at;
+        if (assignedAt) {
+          const elapsed = now - new Date(assignedAt).getTime();
+          if (elapsed > RIDER_PICKUP_TIMEOUT && order.delivery?.rider?.phone) {
+            return {
+              message: 'Rider seems to be delayed at the pharmacy',
+              actionLabel: 'Call Rider',
+              onAction: () =>
+                Linking.openURL(`tel:${order.delivery!.rider!.phone}`),
+            };
+          }
         }
       }
     }
 
     return null;
   }, [
+    isPickup,
     order.status,
     order.delivery?.status,
     order.placed_at,

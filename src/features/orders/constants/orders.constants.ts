@@ -7,7 +7,7 @@
 //   - Added getStatusColors: centralizes the colorKey → { fg, bg, border }
 //     theme-token mapping so screens don't duplicate this ternary chain.
 
-import type { MarketplaceOrderStatus } from '../../../types/order';
+import type { MarketplaceOrderStatus, FulfillmentType } from '../../../types/order';
 import type { ColorPalette } from '../../../theme/colors';
 
 // ── Status display label ──────────────────────────────────────────────────────
@@ -57,6 +57,55 @@ const STATUS_ICON: Record<MarketplaceOrderStatus, string> = {
 
 export function getStatusIcon(status: MarketplaceOrderStatus): string {
   return STATUS_ICON[status] ?? 'help-circle-outline';
+}
+
+// ── Fulfillment-aware overrides ─────────────────────────────────────────────
+// Pickup orders use different customer-facing language for key statuses.
+
+const PICKUP_STATUS_LABELS: Partial<Record<MarketplaceOrderStatus, string>> = {
+  PLACED:           'Order Placed',
+  ACCEPTED:         'Pharmacy Received',
+  READY_FOR_PICKUP: 'Ready for Pickup',
+  COMPLETED:        'Picked Up',
+  CANCELLED:        'Cancelled',
+  REJECTED:         'Rejected',
+};
+
+const PICKUP_STATUS_ICONS: Partial<Record<MarketplaceOrderStatus, string>> = {
+  READY_FOR_PICKUP: 'storefront-outline',
+  COMPLETED:        'checkmark-circle',
+};
+
+export function getStatusLabelForFulfillment(
+  status: MarketplaceOrderStatus,
+  fulfillmentType?: FulfillmentType | string | null,
+): string {
+  if (fulfillmentType === 'PICKUP') {
+    return PICKUP_STATUS_LABELS[status] ?? STATUS_LABELS[status] ?? status;
+  }
+  return STATUS_LABELS[status] ?? status;
+}
+
+export function getStatusIconForFulfillment(
+  status: MarketplaceOrderStatus,
+  fulfillmentType?: FulfillmentType | string | null,
+): string {
+  if (fulfillmentType === 'PICKUP' && PICKUP_STATUS_ICONS[status]) {
+    return PICKUP_STATUS_ICONS[status]!;
+  }
+  return STATUS_ICON[status] ?? 'help-circle-outline';
+}
+
+export function getFulfillmentLabel(
+  fulfillmentType?: FulfillmentType | string | null,
+): string {
+  switch (fulfillmentType) {
+    case 'PICKUP':          return 'Pickup';
+    case 'SAME_DAY':        return 'Same Day';
+    case 'NEXT_DAY':        return 'Next Day';
+    case 'INSTANT_DELIVERY':
+    default:                return 'Delivery';
+  }
 }
 
 // ── Resolved status colors (fg / bg / border) for badges & timelines ──────────

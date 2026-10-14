@@ -37,7 +37,10 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
     setQuoteLoading,
     couponCode,
     loyaltyPointsToRedeem,
+    fulfillmentType,
   } = useCheckoutStore();
+
+  const isPickup = fulfillmentType === 'PICKUP';
 
   const selectedPatient = useCheckoutStore((s) => s.selectedPatient);
   const prescriptionRequestContext = useCheckoutStore(
@@ -47,7 +50,13 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
   const quoteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (items.length === 0 || distanceKm === null) {
+    if (items.length === 0) {
+      setBreakdown(null);
+      return;
+    }
+
+    // For delivery orders we need distance resolved; pickup orders don't.
+    if (!isPickup && distanceKm === null) {
       setBreakdown(null);
       return;
     }
@@ -67,10 +76,11 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
             variantId: i.variantId,
             quantity: i.quantity,
           })),
-          distance_km: distanceKm,
-          tip,
+          distance_km: isPickup ? 0 : (distanceKm ?? 0),
+          tip: isPickup ? 0 : tip,
           coupon_code: couponCode,
           loyalty_points_to_redeem: loyaltyPointsToRedeem,
+          fulfillment_type: fulfillmentType,
         });
         setBreakdown(res.data.data);
       } catch {
@@ -83,36 +93,39 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
     return () => {
       if (quoteDebounceRef.current) clearTimeout(quoteDebounceRef.current);
     };
-  }, [items, distanceKm, tip, couponCode, loyaltyPointsToRedeem]);
+  }, [items, distanceKm, tip, couponCode, loyaltyPointsToRedeem, fulfillmentType, isPickup]);
 
   const placeOrder = useCallback(async () => {
-    if (!resolvedAddress) {
-      await showAlert({
-        title: "Address Required",
-        message: "Please add a delivery address before placing your order.",
-        confirmLabel: "OK",
-      });
-      return;
-    }
+    // Address + distance checks only apply to delivery orders
+    if (!isPickup) {
+      if (!resolvedAddress) {
+        await showAlert({
+          title: "Address Required",
+          message: "Please add a delivery address before placing your order.",
+          confirmLabel: "OK",
+        });
+        return;
+      }
 
-    if (distanceKm === null) {
-      await showAlert({
-        title: "Location Error",
-        message: "Unable to calculate delivery distance. Please check your address.",
-        confirmLabel: "OK",
-      });
-      return;
-    }
+      if (distanceKm === null) {
+        await showAlert({
+          title: "Location Error",
+          message: "Unable to calculate delivery distance. Please check your address.",
+          confirmLabel: "OK",
+        });
+        return;
+      }
 
-    if (breakdown && !breakdown.delivery_available) {
-      await showAlert({
-        title: "Delivery Unavailable",
-        message:
-          breakdown.unavailable_reason ??
-          "Delivery is not available to this location.",
-        confirmLabel: "OK",
-      });
-      return;
+      if (breakdown && !breakdown.delivery_available) {
+        await showAlert({
+          title: "Delivery Unavailable",
+          message:
+            breakdown.unavailable_reason ??
+            "Delivery is not available to this location.",
+          confirmLabel: "OK",
+        });
+        return;
+      }
     }
 
     const branchId = items[0]?.branchId;
@@ -137,17 +150,18 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
     try {
       const sessionRes = await checkoutApi.createSession({
         branch_id: branchId,
-        delivery_address_id: resolvedAddress.id,
+        delivery_address_id: isPickup ? null : resolvedAddress!.id,
         items: items.map((i) => ({
           variantId: i.variantId,
           quantity: i.quantity,
         })),
-        distance_km: distanceKm,
-        tip,
+        distance_km: isPickup ? 0 : (distanceKm ?? 0),
+        tip: isPickup ? 0 : tip,
         prescription_files: tempPrescriptions,
         patient: selectedPatient,
         coupon_code: couponCode,
         loyalty_points_to_redeem: loyaltyPointsToRedeem,
+        fulfillment_type: fulfillmentType,
         ...(prescriptionRequestContext
           ? {
               prescription_request_id: prescriptionRequestContext.prescription_request_id,
@@ -228,6 +242,8 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
     couponCode,
     loyaltyPointsToRedeem,
     prescriptionRequestContext,
+    fulfillmentType,
+    isPickup,
     clearCart,
     clearPrescriptions,
     onSuccess,

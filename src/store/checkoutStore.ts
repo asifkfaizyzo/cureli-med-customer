@@ -3,6 +3,7 @@
 
 import { create } from 'zustand';
 import type { CheckoutPatient } from '../types/auth';
+import type { FulfillmentType } from '../types/order';
 
 export interface PriceBreakdown {
   subtotal:                 number;
@@ -11,6 +12,7 @@ export interface PriceBreakdown {
   delivery_fee:             number;        // Replaces base delivery fee
   delivery_charge_anchor?:  number | null; // Cosmetic anchor for delivery charge
   km_surcharge:             number;        // Kept 0 for new orders, legacy compatibility
+  packing_charge:           number;        // New: packing fee for pickup orders
   platform_savings?:        number;        // Total platform-side savings
   tip:                      number;
   coupon_code:              string | null;
@@ -33,6 +35,7 @@ interface CheckoutStore {
   breakdown:                    PriceBreakdown | null;
   isQuoteLoading:               boolean;
   tip:                          number;
+  fulfillmentType:              FulfillmentType;
   selectedPatient:              CheckoutPatient | null;
   prescriptionRequestContext:   PrescriptionRequestContext | null;
 
@@ -43,6 +46,7 @@ interface CheckoutStore {
   setBreakdown:                    (b: PriceBreakdown | null) => void;
   setQuoteLoading:                 (v: boolean) => void;
   setTip:                          (amount: number) => void;
+  setFulfillmentType:              (type: FulfillmentType) => void;
   setSelectedPatient:              (patient: CheckoutPatient | null) => void;
   setPrescriptionRequestContext:   (ctx: PrescriptionRequestContext | null) => void;
   setCouponCode:                   (code: string | null) => void;
@@ -54,6 +58,7 @@ export const useCheckoutStore = create<CheckoutStore>()((set) => ({
   breakdown:                  null,
   isQuoteLoading:             false,
   tip:                        0,
+  fulfillmentType:            'INSTANT_DELIVERY',
   selectedPatient:            null,
   prescriptionRequestContext: null,
   couponCode:                 null,
@@ -62,6 +67,7 @@ export const useCheckoutStore = create<CheckoutStore>()((set) => ({
   setBreakdown:                  (breakdown)                  => set({ breakdown }),
   setQuoteLoading:               (isQuoteLoading)             => set({ isQuoteLoading }),
   setTip:                        (tip)                        => set({ tip }),
+  setFulfillmentType:            (fulfillmentType)            => set({ fulfillmentType }),
   setSelectedPatient:            (selectedPatient)            => set({ selectedPatient }),
   setPrescriptionRequestContext: (prescriptionRequestContext) => set({ prescriptionRequestContext }),
   setCouponCode:                 (couponCode)                 => set({ couponCode }),
@@ -72,6 +78,7 @@ export const useCheckoutStore = create<CheckoutStore>()((set) => ({
       breakdown:                  null,
       isQuoteLoading:             false,
       tip:                        0,
+      fulfillmentType:            'INSTANT_DELIVERY',
       selectedPatient:            null,
       prescriptionRequestContext: null,
       couponCode:                 null,
