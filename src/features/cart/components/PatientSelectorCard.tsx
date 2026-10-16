@@ -2,8 +2,9 @@
 // src/features/cart/components/PatientSelectorCard.tsx
 
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../theme/ThemeContext';
+import { Spacing } from '../../../theme/spacing';
 import type { CheckoutPatient, UserSex } from '../../../types/auth';
 
 const SEX_LABEL: Record<UserSex, string> = {
@@ -25,109 +26,133 @@ export function PatientSelectorCard({
   const brandColor = isDark ? colors.brand.accent : colors.brand.primary;
 
   const hasPatient = patient !== null;
+  const accentColor = hasPatient ? colors.brand.primary : colors.status.warning;
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.background.card,
-          borderColor: hasPatient ? colors.border.subtle : colors.status.warning,
-        },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.75}
-      accessibilityLabel="Select who this order is for"
-    >
-      {/* Icon */}
-      <View
+    <View style={styles.cardOuter}>
+      {/* ── Left accent bar (purple = selected, warning = needs selection) ── */}
+      <View style={[styles.leftAccent, { backgroundColor: accentColor }]} />
+
+      <TouchableOpacity
         style={[
-          styles.iconWrapper,
+          styles.card,
           {
-            backgroundColor: hasPatient
-              ? colors.background.tint
-              : colors.status.warningBg ?? colors.background.tint,
+            backgroundColor: colors.background.card,
+            borderColor: hasPatient ? colors.border.subtle : colors.status.warningBorder,
           },
         ]}
+        onPress={onPress}
+        activeOpacity={0.75}
+        accessibilityLabel="Select who this order is for"
       >
-        <MaterialIcons
-          name={hasPatient ? 'people' : 'person-add'}
-          size={20}
-          color={hasPatient ? brandColor : colors.status.warning}
-        />
-      </View>
+        {/* ── Icon badge ── */}
+        <View
+          style={[
+            styles.iconBadge,
+            {
+              backgroundColor: hasPatient
+                ? colors.background.tint
+                : colors.status.warningBg,
+            },
+          ]}
+        >
+          <Ionicons
+            name={hasPatient ? 'person' : 'person-add-outline'}
+            size={18}
+            color={hasPatient ? brandColor : colors.status.warning}
+          />
+        </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        <Text style={[styles.label, { color: colors.text.secondary }]}>
-          Ordering for
-        </Text>
-        {hasPatient ? (
-          <Text
-            style={[styles.patientName, { color: colors.text.primary }]}
-            numberOfLines={1}
-          >
-            {patient!.name}
-            {patient!.is_self ? (
-              <Text style={[styles.selfTag, { color: colors.text.faint }]}>
-                {' '}(You)
+        {/* ── Content ── */}
+        <View style={styles.content}>
+          <Text style={[styles.microLabel, { color: accentColor }]}>
+            PATIENT
+          </Text>
+          {hasPatient ? (
+            <>
+              <Text
+                style={[styles.patientName, { color: colors.text.primary }]}
+                numberOfLines={1}
+              >
+                {patient!.name}
+                {patient!.is_self ? (
+                  <Text style={[styles.selfTag, { color: colors.text.faint }]}>
+                    {' '}(You)
+                  </Text>
+                ) : null}
               </Text>
-            ) : null}
-          </Text>
-        ) : (
-          <Text style={[styles.placeholder, { color: colors.status.warning }]}>
-            Select who this is for
-          </Text>
-        )}
-        {hasPatient ? (
-          <Text style={[styles.meta, { color: colors.text.muted }]}>
-            {SEX_LABEL[patient!.sex]} · {patient!.age} yrs
-          </Text>
-        ) : null}
-      </View>
+              <Text style={[styles.meta, { color: colors.text.muted }]}>
+                {SEX_LABEL[patient!.sex]} · {patient!.age} yrs
+              </Text>
+            </>
+          ) : (
+            <Text style={[styles.placeholder, { color: colors.status.warning }]}>
+              Select who this is for
+            </Text>
+          )}
+        </View>
 
-      {/* Arrow */}
-      <MaterialIcons
-        name="chevron-right"
-        size={22}
-        color={colors.text.faint}
-      />
-    </TouchableOpacity>
+        {/* ── Chevron ── */}
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color={colors.text.faint}
+        />
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  // ── Card shell with left accent ──
+  cardOuter: {
     flexDirection: 'row',
-    alignItems: 'center',
     marginHorizontal: 16,
     marginTop: 12,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    gap: 12,
-    shadowColor: '#090025',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  iconWrapper: {
-    width: 40,
-    height: 40,
     borderRadius: 20,
+    shadowColor: '#090025',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  leftAccent: {
+    width: 4,
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 20,
+  },
+  card: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    padding: 14,
+    paddingLeft: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+
+  // ── Icon badge (rounded square, matching title icon pattern) ──
+  iconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
+
+  // ── Content ──
   content: {
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
-  label: {
-    fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+  microLabel: {
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 1.2,
+    marginBottom: 2,
   },
   patientName: {
     fontSize: 15,
@@ -144,5 +169,6 @@ const styles = StyleSheet.create({
   meta: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
+    marginTop: 1,
   },
 });

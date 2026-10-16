@@ -9,6 +9,7 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTheme } from "../../../theme/ThemeContext";
 import { useCartStore } from "../../../store/cartStore";
@@ -108,18 +109,36 @@ export function RecommendationSection() {
   );
 
   // Hide if no pharmacy context, still loading, or no results
-   if (!pharmacy || branchFetch.isLoading || recommendations.length === 0) {
+  if (!pharmacy || branchFetch.isLoading || recommendations.length === 0) {
     return null;
   }
 
   return (
     <View style={styles.section}>
-      <Text
-        style={[styles.title, { color: colors.text.primary }]}
-        numberOfLines={1}
-      >
-        Also available at {pharmacy.shopName}
-      </Text>
+      {/* ── Section header with accent ── */}
+      <View style={styles.headerWrap}>
+        <View style={styles.headerLeft}>
+          <View style={[styles.leftAccent, { backgroundColor: colors.brand.primary }]} />
+          <View style={{ flex: 1 }}>
+            
+            <View style={styles.titleRow}>
+              <View style={[styles.titleIconWrap, { backgroundColor: colors.background.tint }]}>
+                <Ionicons name="storefront-outline" size={13} color={colors.brand.primary} />
+              </View>
+              <Text
+                style={[styles.title, { color: colors.text.primary }]}
+                numberOfLines={1}
+              >
+                Also available at{" "}
+                <Text style={{ fontFamily: "Inter_700Bold" }}>
+                  {pharmacy.shopName}
+                </Text>
+              </Text>
+            </View>
+          </View>
+        </View>
+        
+      </View>
 
       <FlatList
         data={recommendations}
@@ -137,11 +156,51 @@ const styles = StyleSheet.create({
   section: {
     marginTop: 20,
   },
-  title: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    marginBottom: 12,
+  headerWrap: {
     paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  leftAccent: {
+    width: 3,
+    height: 32,
+    borderRadius: 2,
+    marginTop: 2,
+  },
+  microLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    flex: 1,
+  },
+  titleIconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    flex: 1,
+  },
+  titleUnderline: {
+    height: 2,
+    borderRadius: 1,
+    opacity: 0.08,
+    marginTop: 8,
+    marginLeft: 13,
   },
   rail: {
     paddingHorizontal: 16,

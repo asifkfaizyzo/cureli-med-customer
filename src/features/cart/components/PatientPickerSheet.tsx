@@ -1,25 +1,30 @@
 // src/features/cart/components/PatientPickerSheet.tsx (do not remove this comment)
 // src/features/cart/components/PatientPickerSheet.tsx
 
-import { useEffect, useRef, useCallback } from 'react';
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useCallback } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Dimensions,
+  Modal,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Modal,
-  Animated,
-  Dimensions,
-  ActivityIndicator,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useTheme } from '../../../theme/ThemeContext';
-import { useAuthStore } from '../../../store/authStore';
-import { useMembers } from '../../profile/hooks/useMembers';
-import type { CheckoutPatient, UserSex } from '../../../types/auth';
-import type { FamilyMember } from '../../../types/members';
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { useAuthStore } from "../../../store/authStore";
+import { useTheme } from "../../../theme/ThemeContext";
+import { Spacing } from "../../../theme/spacing";
+import { useMembers } from "../../profile/hooks/useMembers";
+import type { CheckoutPatient, UserSex } from "../../../types/auth";
+import type { FamilyMember } from "../../../types/members";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const MAX_SHEET_HEIGHT = SCREEN_HEIGHT * 0.75;
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -33,12 +38,18 @@ interface PatientPickerSheetProps {
 // ── Helpers ───────────────────────────────────────────────────
 
 const SEX_LABEL: Record<UserSex, string> = {
-  MALE:   'Male',
-  FEMALE: 'Female',
-  OTHER:  'Other',
+  MALE: "Male",
+  FEMALE: "Female",
+  OTHER: "Other",
 };
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.substring(0, 2), 16) || 0;
+  const g = parseInt(clean.substring(2, 4), 16) || 0;
+  const b = parseInt(clean.substring(4, 6), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 function computeAge(dobStr: string): number {
   const dob = new Date(dobStr);
@@ -49,67 +60,70 @@ function computeAge(dobStr: string): number {
   return age;
 }
 
-// ── Patient Row ───────────────────────────────────────────────
-
-interface PatientRowProps {
-  name: string;
-  subtitle: string;
-  isSelected: boolean;
-  onPress: () => void;
-  brandColor: string;
-  colors: any;
-  isSelf?: boolean;
-}
+// ── Single patient row ────────────────────────────────────────
 
 function PatientRow({
   name,
   subtitle,
   isSelected,
-  onPress,
-  brandColor,
-  colors,
+  onSelect,
+  onEdit,
   isSelf,
-}: PatientRowProps) {
+}: {
+  name: string;
+  subtitle: string;
+  isSelected: boolean;
+  onSelect: () => void;
+  onEdit?: () => void;
+  isSelf?: boolean;
+}) {
+  const { colors, isDark } = useTheme();
+  const brandColor = isDark ? colors.brand.accent : colors.brand.primary;
+
   return (
     <TouchableOpacity
+      onPress={onSelect}
+      activeOpacity={0.75}
       style={[
         styles.patientRow,
         {
           backgroundColor: isSelected
             ? colors.background.tint
             : colors.background.card,
-          borderColor: isSelected ? brandColor : colors.border.subtle,
+          borderColor: isSelected ? brandColor : colors.border.default,
+          borderWidth: isSelected ? 2 : 1,
         },
       ]}
-      onPress={onPress}
-      activeOpacity={0.75}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: isSelected }}
+      accessibilityLabel={`${name}, ${subtitle}`}
     >
-      {/* Avatar */}
+      {/* Visual Type Indicator */}
       <View
         style={[
-          styles.patientAvatar,
+          styles.patientIcon,
           {
             backgroundColor: isSelected
-              ? brandColor
-              : colors.background.elevated,
+              ? hexToRgba(brandColor, 0.15)
+              : colors.background.tint,
           },
         ]}
       >
-        <MaterialIcons
-          name={isSelf ? 'person' : 'people'}
-          size={20}
-          color={isSelected ? '#ffffff' : colors.text.muted}
+        <Ionicons
+          name={isSelf ? "person" : "people-outline"}
+          size={18}
+          color={isSelected ? brandColor : colors.text.muted}
         />
       </View>
 
-      {/* Info */}
-      <View style={styles.patientInfo}>
+      {/* Primary Details Block */}
+      <View style={styles.patientText}>
         <Text
           style={[
-            styles.patientName,
+            styles.patientLabel,
             {
-              color: colors.text.primary,
-              fontFamily: isSelected ? 'Inter_600SemiBold' : 'Inter_500Medium',
+              color: isSelected ? brandColor : colors.text.primary,
+              fontFamily: "Inter_600SemiBold",
             },
           ]}
           numberOfLines={1}
@@ -119,38 +133,49 @@ function PatientRow({
             <Text
               style={[
                 styles.selfBadge,
-                { color: colors.text.faint },
+                { color: colors.text.faint, fontFamily: "Inter_400Regular" },
               ]}
             >
-              {' '}(You)
+              {" "}(You)
             </Text>
           ) : null}
         </Text>
-        <Text style={[styles.patientSubtitle, { color: colors.text.muted }]}>
+        <Text
+          style={[
+            styles.patientLine,
+            { color: colors.text.muted, fontFamily: "Inter_400Regular" },
+          ]}
+          numberOfLines={1}
+        >
           {subtitle}
         </Text>
       </View>
 
-      {/* Selection indicator */}
-      {isSelected ? (
-        <MaterialIcons
-          name="check-circle"
-          size={22}
-          color={brandColor}
-        />
-      ) : (
-        <View
-          style={[
-            styles.unselectedCircle,
-            { borderColor: colors.border.input },
-          ]}
-        />
-      )}
+      {/* Micro-Minimal Top-Right Edit Pen Icon (members only) */}
+      {onEdit ? (
+        <TouchableOpacity
+          onPress={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          activeOpacity={0.5}
+          style={styles.editButton}
+          hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+          accessibilityLabel="Edit member"
+        >
+          <Ionicons
+            name="create-outline"
+            size={16}
+            color={isSelected ? brandColor : colors.text.muted}
+            style={{ opacity: isSelected ? 0.9 : 0.6 }}
+          />
+        </TouchableOpacity>
+      ) : null}
     </TouchableOpacity>
   );
 }
 
-// ── Main Sheet ────────────────────────────────────────────────
+// ── Sheet ─────────────────────────────────────────────────────
 
 export function PatientPickerSheet({
   visible,
@@ -159,30 +184,11 @@ export function PatientPickerSheet({
   onClose,
 }: PatientPickerSheetProps) {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const brandColor = isDark ? colors.brand.accent : colors.brand.primary;
 
   const user = useAuthStore((s) => s.user);
   const { members, isLoading } = useMembers();
-
-  // ── Animation ─────────────────────────────────────────────
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 20,
-        stiffness: 200,
-      }).start();
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: SCREEN_HEIGHT,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible]);
 
   // ── Build "Myself" patient from user ─────────────────────
   const myselfPatient: CheckoutPatient | null = (() => {
@@ -196,23 +202,27 @@ export function PatientPickerSheet({
   })();
 
   // ── Build patient from family member ─────────────────────
-  function memberToPatient(member: FamilyMember): CheckoutPatient {
-    return {
+  const memberToPatient = useCallback(
+    (member: FamilyMember): CheckoutPatient => ({
       is_self: false,
       name: member.name,
       age: member.age,
       sex: member.sex,
-    };
-  }
+    }),
+    [],
+  );
 
   // ── Check if a patient matches the selected one ───────────
-  function isPatientSelected(patient: CheckoutPatient): boolean {
-    if (!selectedPatient) return false;
-    return (
-      patient.is_self === selectedPatient.is_self &&
-      patient.name === selectedPatient.name
-    );
-  }
+  const isPatientSelected = useCallback(
+    (patient: CheckoutPatient): boolean => {
+      if (!selectedPatient) return false;
+      return (
+        patient.is_self === selectedPatient.is_self &&
+        patient.name === selectedPatient.name
+      );
+    },
+    [selectedPatient],
+  );
 
   const handleSelectMyself = useCallback(() => {
     if (!myselfPatient) return;
@@ -225,143 +235,224 @@ export function PatientPickerSheet({
       onSelect(memberToPatient(member));
       onClose();
     },
-    [onSelect, onClose],
+    [onSelect, onClose, memberToPatient],
   );
 
-  const handleAddMember = useCallback(() => {
+  const handleEditMember = useCallback(() => {
     onClose();
-    // Small delay so sheet closes before navigating
     setTimeout(() => {
-      router.push('/profile/members' as any);
+      router.push("/profile/members" as any);
     }, 250);
   }, [onClose]);
 
-  if (!visible) return null;
+  const handleAddMember = useCallback(() => {
+    onClose();
+    setTimeout(() => {
+      router.push("/profile/members" as any);
+    }, 250);
+  }, [onClose]);
 
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
-    >
-      {/* Backdrop */}
-      <TouchableOpacity
-        style={styles.backdrop}
-        onPress={onClose}
-        activeOpacity={1}
-      />
-
-      {/* Sheet */}
-      <Animated.View
-        style={[
-          styles.sheet,
-          {
-            backgroundColor: colors.background.card,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Handle */}
-        <View
-          style={[styles.handle, { backgroundColor: colors.border.subtle }]}
-        />
-
-        {/* Header */}
-        <View style={styles.sheetHeader}>
-          <Text style={[styles.sheetTitle, { color: colors.text.primary }]}>
-            Who is this for?
+  // ── Content ───────────────────────────────────────────────
+  const renderContent = () => {
+    if (isLoading && !myselfPatient) {
+      return (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color={brandColor} />
+          <Text
+            style={[
+              styles.centerText,
+              { color: colors.text.muted, fontFamily: "Inter_400Regular" },
+            ]}
+          >
+            Loading…
           </Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <MaterialIcons
-              name="close"
-              size={22}
-              color={colors.text.muted}
-            />
-          </TouchableOpacity>
         </View>
+      );
+    }
 
-        <Text style={[styles.sheetSubtitle, { color: colors.text.muted }]}>
-          Select the person you're ordering medicines for
-        </Text>
+    if (!myselfPatient && members.length === 0 && !isLoading) {
+      return (
+        <View style={styles.centerContent}>
+          <MaterialIcons
+            name="person-off"
+            size={44}
+            color={colors.text.faint}
+          />
+          <Text
+            style={[
+              styles.centerText,
+              {
+                color: colors.text.secondary,
+                fontFamily: "Inter_600SemiBold",
+              },
+            ]}
+          >
+            No patients available
+          </Text>
+          <Text
+            style={[
+              styles.centerSub,
+              { color: colors.text.muted, fontFamily: "Inter_400Regular" },
+            ]}
+          >
+            Add a family member to continue
+          </Text>
+        </View>
+      );
+    }
 
-        <ScrollView
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Myself */}
-          {myselfPatient ? (
-            <PatientRow
-              name={myselfPatient.name}
-              subtitle={`${SEX_LABEL[myselfPatient.sex]} · ${myselfPatient.age} yrs`}
-              isSelected={isPatientSelected(myselfPatient)}
-              onPress={handleSelectMyself}
-              brandColor={brandColor}
-              colors={colors}
-              isSelf
-            />
-          ) : null}
+    return (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Myself */}
+        {myselfPatient ? (
+          <PatientRow
+            name={myselfPatient.name}
+            subtitle={`${SEX_LABEL[myselfPatient.sex]} · ${myselfPatient.age} yrs`}
+            isSelected={isPatientSelected(myselfPatient)}
+            onSelect={handleSelectMyself}
+            isSelf
+          />
+        ) : null}
 
-          {/* Loading members */}
-          {isLoading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={brandColor} />
-              <Text style={[styles.loadingText, { color: colors.text.muted }]}>
-                Loading members…
-              </Text>
-            </View>
-          ) : null}
+        {/* Loading members below myself */}
+        {isLoading && myselfPatient ? (
+          <View style={styles.inlineLoadingRow}>
+            <ActivityIndicator size="small" color={brandColor} />
+            <Text
+              style={[
+                styles.inlineLoadingText,
+                { color: colors.text.muted, fontFamily: "Inter_400Regular" },
+              ]}
+            >
+              Loading members…
+            </Text>
+          </View>
+        ) : null}
 
-          {/* Family members */}
-          {!isLoading &&
-            members.map((member) => (
+        {/* Family members */}
+        {!isLoading &&
+          members.map((member) => {
+            const patient = memberToPatient(member);
+            return (
               <PatientRow
                 key={member.id}
                 name={member.name}
                 subtitle={`${SEX_LABEL[member.sex]} · ${member.age} yrs`}
-                isSelected={isPatientSelected(memberToPatient(member))}
-                onPress={() => handleSelectMember(member)}
-                brandColor={brandColor}
-                colors={colors}
+                isSelected={isPatientSelected(patient)}
+                onSelect={() => handleSelectMember(member)}
+                onEdit={handleEditMember}
               />
-            ))}
+            );
+          })}
+      </ScrollView>
+    );
+  };
 
-          {/* Divider */}
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="overFullScreen"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      {/* ── Backdrop ──────────────────────────────────────── */}
+      <TouchableOpacity
+        style={styles.backdrop}
+        onPress={onClose}
+        activeOpacity={1}
+        accessibilityLabel="Close patient picker"
+      />
+
+      {/* ── Sheet ─────────────────────────────────────────── */}
+      <View
+        style={[
+          styles.sheet,
+          {
+            backgroundColor: colors.background.page,
+            maxHeight: MAX_SHEET_HEIGHT,
+            paddingBottom: Math.max(insets.bottom, 16),
+          },
+        ]}
+      >
+        {/* ── Drag handle ───────────────────────────────── */}
+        <View style={styles.dragHandleRow}>
           <View
             style={[
-              styles.divider,
-              { backgroundColor: colors.border.subtle },
+              styles.dragHandle,
+              { backgroundColor: colors.border.default },
             ]}
           />
+        </View>
 
-          {/* Add member */}
-          <TouchableOpacity
+        {/* ── Header ────────────────────────────────────── */}
+        <View
+          style={[
+            styles.sheetHeader,
+            {
+              borderBottomColor: colors.border.subtle,
+            },
+          ]}
+        >
+          <Text
             style={[
-              styles.addMemberBtn,
-              { borderColor: brandColor },
+              styles.sheetTitle,
+              { color: colors.text.primary, fontFamily: "Inter_700Bold" },
             ]}
+          >
+            Who is this for?
+          </Text>
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Close"
+          >
+            <Ionicons name="close" size={22} color={colors.text.secondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Patient list ─────────────────────────────── */}
+        <View style={styles.contentArea}>{renderContent()}</View>
+
+        {/* ── Add new member ──────────────────────────── */}
+        <View
+          style={[
+            styles.addNewContainer,
+            {
+              borderTopColor: colors.border.subtle,
+            },
+          ]}
+        >
+          <TouchableOpacity
             onPress={handleAddMember}
             activeOpacity={0.75}
+            style={[
+              styles.addNewButton,
+              {
+                borderColor: brandColor,
+                backgroundColor: colors.background.tint,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Add family member"
           >
-            <View
+            <Ionicons name="person-add-outline" size={18} color={brandColor} />
+            <Text
               style={[
-                styles.addMemberIcon,
-                { backgroundColor: colors.background.tint },
+                styles.addNewText,
+                { color: brandColor, fontFamily: "Inter_600SemiBold" },
               ]}
             >
-              <MaterialIcons name="person-add" size={18} color={brandColor} />
-            </View>
-            <Text style={[styles.addMemberText, { color: brandColor }]}>
-              Add a family member
+              Add family member
             </Text>
-            <MaterialIcons
-              name="chevron-right"
-              size={20}
-              color={brandColor}
-            />
           </TouchableOpacity>
-        </ScrollView>
-      </Animated.View>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -370,125 +461,127 @@ export function PatientPickerSheet({
 
 const styles = StyleSheet.create({
   backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   sheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 20,
-    maxHeight: SCREEN_HEIGHT * 0.75,
+    shadowRadius: 12,
+    elevation: 16,
   },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
+  dragHandleRow: {
+    alignItems: "center",
+    paddingTop: 10,
     paddingBottom: 4,
   },
-  sheetTitle: {
-    fontSize: 17,
-    fontFamily: 'Inter_700Bold',
+  dragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
   },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
   },
-  sheetSubtitle: {
+  sheetTitle: { fontSize: 17 },
+  contentArea: {
+    flexShrink: 1,
+  },
+  centerContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.xl,
+  },
+  centerText: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: Spacing.sm,
+  },
+  centerSub: {
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    textAlign: "center",
   },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-    gap: 8,
+  list: {
+    paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.base,
+    paddingBottom: Spacing.md,
+    gap: Spacing.sm,
   },
+
+  // ── Patient row ──
   patientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingLeft: 14,
+    paddingRight: 32, // defensive buffer space for absolute corner button
   },
-  patientAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+  patientIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
-  patientInfo: {
+  patientText: {
     flex: 1,
     gap: 2,
   },
-  patientName: {
-    fontSize: 15,
+  patientLabel: { fontSize: 14 },
+  selfBadge: { fontSize: 12 },
+  patientLine: { fontSize: 12, lineHeight: 17 },
+  editButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 10,
   },
-  selfBadge: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-  },
-  patientSubtitle: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-  },
-  unselectedCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  // ── Inline loading (shown below "myself" while members load) ──
+  inlineLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 4,
   },
-  loadingText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+  inlineLoadingText: {
+    fontSize: 13,
   },
-  divider: {
-    height: 1,
-    marginVertical: 4,
+
+  // ── Add new ──
+  addNewContainer: {
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
   },
-  addMemberBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
+  addNewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     borderWidth: 1.5,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 14,
   },
-  addMemberIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addMemberText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-  },
+  addNewText: { fontSize: 14 },
 });

@@ -9,6 +9,21 @@ function getCartStore() {
   return require('./cartStore').useCartStore.getState();
 }
 
+function getDeliveryLocationStore() {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('./deliveryLocationStore').useDeliveryLocationStore.getState();
+}
+
+function getCheckoutStore() {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('./checkoutStore').useCheckoutStore.getState();
+}
+
+function getQueryClient() {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../lib/queryClient').queryClient;
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   status: 'unknown',
   user: null,
@@ -195,6 +210,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (userId) {
       getCartStore().clearCartForUser(userId);
     }
+
+    // Clear persisted delivery address so the next user starts fresh
+    getDeliveryLocationStore().hardReset();
+
+    // Clear any in-flight checkout state (patient, coupon, tip, etc.)
+    getCheckoutStore().reset();
+
+    // Wipe ALL React Query cached data (profile, addresses, orders, etc.)
+    // so the next user's first render triggers fresh API fetches.
+    getQueryClient().clear();
 
     StorageService.clearAuth();
     set({ status: 'unauthenticated', user: null, accessToken: null });

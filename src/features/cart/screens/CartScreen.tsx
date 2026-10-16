@@ -59,6 +59,7 @@ import { LoyaltyPointsSection } from "../components/LoyaltyPointsSection";
 interface OrderSuccessProps {
   orderId: string | null;
   isPickup: boolean;
+  isSameDay: boolean;
   onNavigateTracking: (orderId: string | null) => void;
   onGoHome: () => void;
 }
@@ -66,6 +67,7 @@ interface OrderSuccessProps {
 function OrderSuccess({
   orderId,
   isPickup,
+  isSameDay,
   onNavigateTracking,
   onGoHome,
 }: OrderSuccessProps) {
@@ -135,7 +137,9 @@ function OrderSuccess({
         <Text style={[styles.successSub, { color: colors.text.muted }]}>
           {isPickup
             ? "Your order has been sent to the pharmacy.\nWe'll notify you when it's ready for pickup."
-            : "Your order has been sent to the pharmacy.\nConnecting you to live tracking..."}
+            : isSameDay
+              ? "Your order has been sent to the pharmacy.\nIt will be delivered by end of day."
+              : "Your order has been sent to the pharmacy.\nConnecting you to live tracking..."}
         </Text>
 
         {/* Transition progress bar */}
@@ -316,6 +320,7 @@ export function CartScreen() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [placedOrderIsPickup, setPlacedOrderIsPickup] = useState(false);
+  const [placedOrderIsSameDay, setPlacedOrderIsSameDay] = useState(false);
 
   const [selectedInstructions, setSelectedInstructions] = useState<string[]>(
     [],
@@ -378,9 +383,9 @@ export function CartScreen() {
     onSuccess: useCallback(
       (orderId?: string) => {
         // Capture fulfillment type BEFORE the store resets
-        setPlacedOrderIsPickup(
-          useCheckoutStore.getState().fulfillmentType === "PICKUP",
-        );
+        const ft = useCheckoutStore.getState().fulfillmentType;
+        setPlacedOrderIsPickup(ft === "PICKUP");
+        setPlacedOrderIsSameDay(ft === "SAME_DAY");
         clearCart();
         clearPrescriptions();
         setSelectedInstructions([]);
@@ -400,6 +405,7 @@ export function CartScreen() {
         <OrderSuccess
           orderId={placedOrderId}
           isPickup={placedOrderIsPickup}
+          isSameDay={placedOrderIsSameDay}
           onNavigateTracking={handleNavigateTracking}
           onGoHome={handleGoHome}
         />

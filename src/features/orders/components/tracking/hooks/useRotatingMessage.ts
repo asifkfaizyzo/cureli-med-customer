@@ -52,6 +52,62 @@ export function useRotatingMessage(order: MobileOrderDetail): RotatingMessageRes
       return { line1, line2, subtitles };
     }
 
+    // ── Same Day: batch-based delivery ──────────────────────────
+    if (order.fulfillment_type === 'SAME_DAY') {
+      if (status === 'PLACED') {
+        line1 = 'Waiting for pharmacy to confirm';
+        subtitles = [
+          'Sending your order to the pharmacy',
+          'This usually takes just a moment',
+        ];
+      } else if (status === 'ACCEPTED') {
+        line1 = 'Pharmacy is preparing your order';
+        subtitles = [
+          'The pharmacist is picking your medicines',
+          'Your order is being packed with care',
+        ];
+      } else if (status === 'READY_FOR_PICKUP') {
+        line1 = 'Your order is packed and ready';
+        if (!ds || ds === 'PENDING_ASSIGNMENT') {
+          line2 = 'Waiting to be assigned to a delivery batch';
+          subtitles = [
+            'Your order will be delivered by end of day',
+            'Orders are grouped for efficient delivery',
+            'A rider will be assigned shortly',
+          ];
+        } else if (ds === 'RIDER_NOTIFIED' || ds === 'ACCEPTED') {
+          line2 = 'Rider is heading to the pharmacy';
+          subtitles = [
+            'Your order is in a delivery batch',
+            'Rider is collecting multiple orders',
+            'Pickup expected soon',
+          ];
+        } else if (ds === 'ARRIVED_AT_PHARMACY') {
+          line2 = 'Rider is at the pharmacy';
+          subtitles = [
+            'Collecting your order now',
+            'Your order will be on its way shortly',
+          ];
+        }
+      } else if (status === 'COMPLETED') {
+        if (ds === 'PICKED_UP' || ds === 'EN_ROUTE') {
+          line2 = `${riderName} is heading to your location`;
+          subtitles = [
+            'Your medicines are on the way',
+            'Delivering today',
+            'Sit tight, arriving soon',
+          ];
+        } else if (ds === 'ARRIVED_AT_CUSTOMER') {
+          line2 = 'Rider is at your door!';
+          subtitles = ['Share your delivery PIN to receive your order'];
+        } else {
+          line2 = 'Delivery in progress';
+          subtitles = ['Your order will be delivered today'];
+        }
+      }
+      return { line1, line2, subtitles };
+    }
+
     // ── Active states: dual-track mapping ────────────────────────
 
     // 1. PLACED — waiting for pharmacy

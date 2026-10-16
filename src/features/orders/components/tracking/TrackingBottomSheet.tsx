@@ -7,7 +7,7 @@
 // Expanded:  + OrderDetails (items, prices, prescriptions, support)
 
 import React, { useMemo, useRef, useCallback } from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -26,9 +26,10 @@ interface TrackingBottomSheetProps {
   order: MobileOrderDetail;
   onBack: () => void;
   topInset: number;
+  isSameDay?: boolean;
 }
 
-export function TrackingBottomSheet({ order, onBack, topInset }: TrackingBottomSheetProps) {
+export function TrackingBottomSheet({ order, onBack, topInset, isSameDay = false }: TrackingBottomSheetProps) {
   const { colors } = useTheme();
   const bottomSheetRef = useRef<BottomSheet>(null);
 
@@ -88,11 +89,31 @@ export function TrackingBottomSheet({ order, onBack, topInset }: TrackingBottomS
             {/* Delay Banner (context-aware, dismissible) */}
             <TrackingDelayBanner order={order} />
 
-            {/* Slot B: Rider Card (or skeleton) */}
-            <TrackingRiderCard
-              rider={order.delivery?.rider}
-              deliveryStatus={order.delivery?.status}
-            />
+            {/* Slot B: Rider Card (skip for Same Day — batch delivery, no rider info) */}
+            {isSameDay ? (
+              <View
+                style={[
+                  styles.sameDayBatchBanner,
+                  { backgroundColor: '#0891b214', borderColor: '#0891b230' },
+                ]}
+              >
+                <Ionicons name="cube-outline" size={18} color="#0891b2" />
+                <Text
+                  style={[
+                    styles.sameDayBatchText,
+                    { color: '#0891b2' },
+                  ]}
+                  numberOfLines={2}
+                >
+                  Batch delivery - your order is grouped with others for efficient Same Day delivery.
+                </Text>
+              </View>
+            ) : (
+              <TrackingRiderCard
+                rider={order.delivery?.rider}
+                deliveryStatus={order.delivery?.status}
+              />
+            )}
 
             {/* Slot D: Compact Shop Row */}
             <TrackingShopCard order={order} />
@@ -146,5 +167,20 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginVertical: 4,
+  },
+  sameDayBatchBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  sameDayBatchText: {
+    fontSize: 12.5,
+    fontFamily: 'Inter_500Medium',
+    flex: 1,
+    lineHeight: 17,
   },
 });

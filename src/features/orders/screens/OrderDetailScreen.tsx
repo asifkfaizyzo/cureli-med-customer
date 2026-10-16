@@ -782,20 +782,38 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
                   {
                     backgroundColor: isPickup
                       ? colors.status.warningBg
-                      : colors.background.tint,
+                      : order.fulfillment_type === "SAME_DAY"
+                        ? '#0891b214'
+                        : colors.background.tint,
                   },
                 ]}
               >
                 <Ionicons
-                  name={isPickup ? "storefront-outline" : "bicycle-outline"}
+                  name={
+                    isPickup
+                      ? "storefront-outline"
+                      : order.fulfillment_type === "SAME_DAY"
+                        ? "time-outline"
+                        : "bicycle-outline"
+                  }
                   size={12}
-                  color={isPickup ? colors.status.warning : colors.text.muted}
+                  color={
+                    isPickup
+                      ? colors.status.warning
+                      : order.fulfillment_type === "SAME_DAY"
+                        ? '#0891b2'
+                        : colors.text.muted
+                  }
                 />
                 <Text
                   style={[
                     styles.fulfillmentBadgeText,
                     {
-                      color: isPickup ? colors.status.warning : colors.text.muted,
+                      color: isPickup
+                        ? colors.status.warning
+                        : order.fulfillment_type === "SAME_DAY"
+                          ? '#0891b2'
+                          : colors.text.muted,
                     },
                   ]}
                 >

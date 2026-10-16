@@ -28,6 +28,7 @@ export function ActiveTrackingScreen({ order, onBack, onOrderUpdate }: ActiveTra
   const clearTracking = useLiveTrackingStore((s) => s.clearTracking);
 
   const isPickup = order.fulfillment_type === 'PICKUP';
+  const isSameDay = order.fulfillment_type === 'SAME_DAY';
 
   useEffect(() => {
     return () => {
@@ -54,11 +55,16 @@ export function ActiveTrackingScreen({ order, onBack, onOrderUpdate }: ActiveTra
         backgroundColor="transparent"
       />
 
-      {/* Full-screen interactive map */}
-      <TrackingMapView order={order} />
+      {/* Full-screen map — static for Same Day (no rider marker) */}
+      <TrackingMapView order={order} isSameDay={isSameDay} />
 
-      {/* Overlay bottom sheet with all tracking info */}
-      <TrackingBottomSheet order={order} onBack={onBack} topInset={insets.top} />
+      {/* Overlay bottom sheet — hides rider card & ETA for Same Day */}
+      <TrackingBottomSheet
+        order={order}
+        onBack={onBack}
+        topInset={insets.top}
+        isSameDay={isSameDay}
+      />
     </View>
   );
 }

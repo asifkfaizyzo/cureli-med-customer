@@ -8,7 +8,7 @@ import {
   Inter_800ExtraBold,
 } from "@expo-google-fonts/inter";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { router, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -21,6 +21,7 @@ import { GlobalCartBar } from "../src/components/CartBar/GlobalCartBar";
 import { DialogProvider } from "../src/components/Dialog/DialogProvider";
 import { PushManager } from "../src/components/PushManager/PushManager";
 import { useMobileSSE } from "../src/hooks/useMobileSSE";
+import { queryClient } from "../src/lib/queryClient";
 import { api, authEventEmitter } from "../src/services/api";
 import { useAuthStore } from "../src/store/authStore";
 import { ThemeProvider } from "../src/theme/ThemeContext";
@@ -28,15 +29,6 @@ import { ThemeProvider } from "../src/theme/ThemeContext";
 SplashScreen.preventAutoHideAsync();
 
 LogBox.ignoreLogs(["SafeAreaView has been deprecated"]);
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 1000 * 60 * 5,
-    },
-  },
-});
 
 function SSEManager() {
   useMobileSSE();

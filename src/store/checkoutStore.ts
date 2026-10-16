@@ -24,6 +24,8 @@ export interface PriceBreakdown {
   grand_total:              number;
   delivery_available:       boolean;
   unavailable_reason:       string | null;
+  same_day_available?:      boolean;
+  same_day_cutoff_hour?:    number;
 }
 
 export interface PrescriptionRequestContext {

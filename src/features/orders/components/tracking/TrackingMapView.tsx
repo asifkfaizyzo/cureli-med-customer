@@ -30,6 +30,7 @@ import { ordersApi } from "../../../marketplace/api/orders.api";
 
 interface TrackingMapViewProps {
   order: MobileOrderDetail;
+  isSameDay?: boolean;
 }
 
 interface LatLngPoint {
@@ -96,11 +97,9 @@ function getActiveLeg(
   if (!deliveryStatus || !hasRider) return "leg0";
   if (deliveryStatus === "PENDING_ASSIGNMENT") return "leg0";
   if (
-    [
-      "RIDER_NOTIFIED",
-      "ACCEPTED",
-      "ARRIVED_AT_PHARMACY",
-    ].includes(deliveryStatus)
+    ["RIDER_NOTIFIED", "ACCEPTED", "ARRIVED_AT_PHARMACY"].includes(
+      deliveryStatus,
+    )
   )
     return "leg1";
   if (["PICKED_UP", "EN_ROUTE", "ARRIVED_AT_CUSTOMER"].includes(deliveryStatus))
@@ -108,7 +107,7 @@ function getActiveLeg(
   return null;
 }
 
-export function TrackingMapView({ order }: TrackingMapViewProps) {
+export function TrackingMapView({ order, isSameDay = false }: TrackingMapViewProps) {
   const { colors, isDark } = useTheme();
   const mapRef = useRef<MapView>(null);
   const riderLocation = useLiveTrackingStore(
@@ -119,11 +118,13 @@ export function TrackingMapView({ order }: TrackingMapViewProps) {
   const [showRecenter, setShowRecenter] = useState(false);
   const cachedLegRef = useRef<string | null>(null);
 
-  const isPickup = order.fulfillment_type === 'PICKUP';
+  const isPickup = order.fulfillment_type === "PICKUP";
   const delivery = order.delivery;
-  const rider = isPickup ? null : delivery?.rider;
+  // Same Day: no live rider location — customer never sees rider position
+  const rider = (isPickup || isSameDay) ? null : delivery?.rider;
   const deliveryStatus = isPickup ? undefined : delivery?.status;
-  const activeLeg = isPickup ? null : getActiveLeg(deliveryStatus, !!rider);
+  // Same Day: no route polyline — rider chooses their own sequence
+  const activeLeg = (isPickup || isSameDay) ? null : getActiveLeg(deliveryStatus, !!rider);
 
   // ── Coordinate resolution ────────────────────────────────────
   const pharmacyCoords = useMemo<LatLngPoint | null>(() => {

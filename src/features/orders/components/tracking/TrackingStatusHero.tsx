@@ -26,6 +26,7 @@ export function TrackingStatusHero({ order }: TrackingStatusHeroProps) {
   const { line1, line2, subtitle } = useRotatingMessage(order);
   const { etaMinutes, isStale, isArriving } = useLiveETA(order);
 
+  const isSameDay = order.fulfillment_type === 'SAME_DAY';
   const ds = order.delivery?.status;
   const status = order.status;
 
@@ -41,12 +42,14 @@ export function TrackingStatusHero({ order }: TrackingStatusHeroProps) {
   const showOtp = isArrived && order.delivery_otp;
 
   // ── ETA display text ─────────────────────────────────────────
+  // Same Day: no ETA — delivery happens by end of day
   const etaText = useMemo(() => {
+    if (isSameDay) return null;
     if (isArriving) return 'Arriving now';
     if (etaMinutes == null) return null;
     if (isStale) return `~${etaMinutes} min (updating...)`;
     return `Arriving in ~${etaMinutes} min`;
-  }, [etaMinutes, isStale, isArriving]);
+  }, [etaMinutes, isStale, isArriving, isSameDay]);
 
   // ── Terminal state rendering ─────────────────────────────────
   if (isTerminal) {

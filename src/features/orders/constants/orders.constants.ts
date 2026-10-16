@@ -71,6 +71,15 @@ const PICKUP_STATUS_LABELS: Partial<Record<MarketplaceOrderStatus, string>> = {
   REJECTED:         'Rejected',
 };
 
+const SAME_DAY_STATUS_LABELS: Partial<Record<MarketplaceOrderStatus, string>> = {
+  PLACED:           'Order Placed',
+  ACCEPTED:         'Pharmacy Received',
+  READY_FOR_PICKUP: 'Out for Delivery',
+  COMPLETED:        'Delivered',
+  CANCELLED:        'Cancelled',
+  REJECTED:         'Rejected',
+};
+
 const PICKUP_STATUS_ICONS: Partial<Record<MarketplaceOrderStatus, string>> = {
   READY_FOR_PICKUP: 'storefront-outline',
   COMPLETED:        'checkmark-circle',
@@ -83,8 +92,16 @@ export function getStatusLabelForFulfillment(
   if (fulfillmentType === 'PICKUP') {
     return PICKUP_STATUS_LABELS[status] ?? STATUS_LABELS[status] ?? status;
   }
+  if (fulfillmentType === 'SAME_DAY') {
+    return SAME_DAY_STATUS_LABELS[status] ?? STATUS_LABELS[status] ?? status;
+  }
   return STATUS_LABELS[status] ?? status;
 }
+
+const SAME_DAY_STATUS_ICONS: Partial<Record<MarketplaceOrderStatus, string>> = {
+  READY_FOR_PICKUP: 'time-outline',
+  COMPLETED:        'checkmark-circle',
+};
 
 export function getStatusIconForFulfillment(
   status: MarketplaceOrderStatus,
@@ -92,6 +109,9 @@ export function getStatusIconForFulfillment(
 ): string {
   if (fulfillmentType === 'PICKUP' && PICKUP_STATUS_ICONS[status]) {
     return PICKUP_STATUS_ICONS[status]!;
+  }
+  if (fulfillmentType === 'SAME_DAY' && SAME_DAY_STATUS_ICONS[status]) {
+    return SAME_DAY_STATUS_ICONS[status]!;
   }
   return STATUS_ICON[status] ?? 'help-circle-outline';
 }
