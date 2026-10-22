@@ -1,18 +1,18 @@
 // src/features/cart/components/BillDetailsCard.tsx (do not remove this comment)
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect } from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
   Easing,
-} from 'react-native-reanimated';
-import { useTheme } from '../../../theme/ThemeContext';
-import { Spacing } from '../../../theme/spacing';
-import { useCheckoutStore } from '../../../store/checkoutStore';
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
+import { useCheckoutStore } from "../../../store/checkoutStore";
+import { useTheme } from "../../../theme/ThemeContext";
+import { Spacing } from "../../../theme/spacing";
 
 const TIP_PRESETS = [0, 10, 20, 50];
 
@@ -21,10 +21,7 @@ function DashedDivider({ color }: { color: string }) {
   return (
     <View style={styles.dashedWrap}>
       {Array.from({ length: 40 }).map((_, i) => (
-        <View
-          key={i}
-          style={[styles.dash, { backgroundColor: color }]}
-        />
+        <View key={i} style={[styles.dash, { backgroundColor: color }]} />
       ))}
     </View>
   );
@@ -35,24 +32,17 @@ function RowIcon({
   name,
   color,
 }: {
-  name: React.ComponentProps<typeof Ionicons>['name'];
+  name: React.ComponentProps<typeof Ionicons>["name"];
   color: string;
 }) {
   return (
-    <Ionicons
-      name={name}
-      size={13}
-      color={color}
-      style={{ marginRight: 6 }}
-    />
+    <Ionicons name={name} size={13} color={color} style={{ marginRight: 6 }} />
   );
 }
 
 // ── Section micro-label ───────────────────────────────────────
 function SectionLabel({ label, color }: { label: string; color: string }) {
-  return (
-    <Text style={[styles.sectionLabel, { color }]}>{label}</Text>
-  );
+  return <Text style={[styles.sectionLabel, { color }]}>{label}</Text>;
 }
 
 function BillRow({
@@ -66,6 +56,7 @@ function BillRow({
   iconName,
   iconColor,
   zebra = false,
+  onInfoPress,
 }: {
   label: string;
   value: string;
@@ -74,16 +65,17 @@ function BillRow({
   isFree?: boolean;
   dim?: boolean;
   isDiscount?: boolean;
-  iconName?: React.ComponentProps<typeof Ionicons>['name'];
+  iconName?: React.ComponentProps<typeof Ionicons>["name"];
   iconColor?: string;
   zebra?: boolean;
+  onInfoPress?: () => void;
 }) {
   const { colors } = useTheme();
 
   const rowStyle = [
     styles.row,
     zebra && {
-      backgroundColor: colors.background.tint,
+      backgroundColor: colors.background.elevated,
       paddingHorizontal: 8,
       marginHorizontal: -8,
       borderRadius: 6,
@@ -96,7 +88,10 @@ function BillRow({
         {iconName && (
           <RowIcon
             name={iconName}
-            color={iconColor ?? (isDiscount ? colors.status.success : colors.text.muted)}
+            color={
+              iconColor ??
+              (isDiscount ? colors.status.success : colors.text.muted)
+            }
           />
         )}
         <Text
@@ -115,6 +110,18 @@ function BillRow({
         >
           {label}
         </Text>
+        {onInfoPress && (
+          <TouchableOpacity
+            onPress={onInfoPress}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+          >
+            <Ionicons
+              name="information-circle-outline"
+              size={13}
+              color={colors.text.faint}
+            />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.valueContainer}>
@@ -127,7 +134,10 @@ function BillRow({
           style={[
             isTotal ? styles.totalValue : styles.value,
             {
-              color: isDiscount || isFree ? colors.status.success : colors.text.primary,
+              color:
+                isDiscount || isFree
+                  ? colors.status.success
+                  : colors.text.primary,
             },
           ]}
         >
@@ -179,12 +189,16 @@ function SkeletonRow({ widthPct, color }: { widthPct: number; color: string }) {
 
 export function BillDetailsCard() {
   const { colors } = useTheme();
-  const { breakdown, isQuoteLoading, tip, setTip, fulfillmentType } = useCheckoutStore();
+  const { breakdown, isQuoteLoading, tip, setTip, fulfillmentType } =
+    useCheckoutStore();
+  const [showGstTooltip, setShowGstTooltip] = React.useState(false);
 
   // ── Card shell with left accent bar ──
   const CardShell = ({ children }: { children: React.ReactNode }) => (
     <View style={styles.cardOuter}>
-      <View style={[styles.leftAccent, { backgroundColor: colors.brand.primary }]} />
+      <View
+        style={[styles.leftAccent, { backgroundColor: colors.brand.primary }]}
+      />
       <View style={[styles.card, { backgroundColor: colors.background.card }]}>
         {children}
       </View>
@@ -194,11 +208,27 @@ export function BillDetailsCard() {
   // ── Title block with icon ──
   const TitleBlock = () => (
     <View style={styles.titleRow}>
-      <View style={[styles.titleIconWrap, { backgroundColor: colors.background.tint }]}>
-        <Ionicons name="receipt-outline" size={14} color={colors.brand.primary} />
+      <View
+        style={[
+          styles.titleIconWrap,
+          { backgroundColor: colors.background.tint },
+        ]}
+      >
+        <Ionicons
+          name="receipt-outline"
+          size={14}
+          color={colors.brand.primary}
+        />
       </View>
-      <Text style={[styles.title, { color: colors.text.primary }]}>Bill Details</Text>
-      <View style={[styles.titleUnderline, { backgroundColor: colors.brand.primary }]} />
+      <Text style={[styles.title, { color: colors.text.primary }]}>
+        Bill Details
+      </Text>
+      <View
+        style={[
+          styles.titleUnderline,
+          { backgroundColor: colors.brand.primary },
+        ]}
+      />
     </View>
   );
 
@@ -218,16 +248,28 @@ export function BillDetailsCard() {
 
   if (!breakdown) return null;
 
-  const isPickup = fulfillmentType === 'PICKUP';
+  const isPickup = fulfillmentType === "PICKUP";
 
   // ── Combine delivery charges for legacy compatibility & visual merge ──
-  const combinedDelivery = breakdown.delivery_fee + (breakdown.km_surcharge || 0);
+  const combinedDelivery =
+    breakdown.delivery_fee + (breakdown.km_surcharge || 0);
 
   // Pickup orders always show delivery as FREE
   const isDeliveryFree =
-    isPickup ||
-    (combinedDelivery === 0 && !!breakdown.delivery_charge_anchor);
-  const isServiceFree = breakdown.service_charge === 0 && !!breakdown.service_charge_anchor;
+    isPickup || (combinedDelivery === 0 && !!breakdown.delivery_charge_anchor);
+  const isServiceFree =
+    breakdown.service_charge === 0 && !!breakdown.service_charge_anchor;
+
+  // ── Delivery label: append distance when known (hidden for pickup / 0km) ──
+  const distanceKmRaw = breakdown.distance_km ?? 0;
+  const distanceKmDisplay = Number.isInteger(distanceKmRaw)
+    ? distanceKmRaw
+    : distanceKmRaw.toFixed(1);
+  const deliveryLabel = isPickup
+    ? "Delivery fee (Pickup)"
+    : distanceKmRaw > 0
+      ? `Delivery (${distanceKmDisplay} km)`
+      : "Delivery fee";
 
   const packingCharge = breakdown.packing_charge || 0;
 
@@ -235,7 +277,8 @@ export function BillDetailsCard() {
   const hasSavings =
     breakdown.coupon_discount > 0 ||
     breakdown.loyalty_discount > 0 ||
-    (breakdown.platform_savings !== undefined && breakdown.platform_savings > 0);
+    (breakdown.platform_savings !== undefined &&
+      breakdown.platform_savings > 0);
 
   return (
     <CardShell>
@@ -247,36 +290,109 @@ export function BillDetailsCard() {
       <BillRow
         label="Items total"
         value={`₹${breakdown.subtotal.toFixed(2)}`}
-        iconName="cube-outline"
+        iconName="clipboard-outline"
       />
 
       {/* ── Service Charge Row ── */}
       <BillRow
-        label="Service charge"
-        value={isServiceFree ? 'FREE' : `₹${breakdown.service_charge.toFixed(2)}`}
-        anchorValue={breakdown.service_charge_anchor ? `₹${breakdown.service_charge_anchor.toFixed(2)}` : null}
+        label="Service charges"
+        value={
+          isServiceFree ? "FREE" : `₹${breakdown.service_charge.toFixed(2)}`
+        }
+        anchorValue={
+          breakdown.service_charge_anchor
+            ? `₹${breakdown.service_charge_anchor.toFixed(2)}`
+            : null
+        }
         isFree={isServiceFree}
         iconName="briefcase-outline"
         zebra
       />
-
-      {/* ── Merged Delivery Row (always shown — FREE for pickup) ── */}
-      <BillRow
-        label={isPickup ? 'Delivery fee (Pickup)' : 'Delivery fee'}
-        value={isDeliveryFree ? 'FREE' : `₹${combinedDelivery.toFixed(2)}`}
-        anchorValue={!isPickup && breakdown.delivery_charge_anchor ? `₹${breakdown.delivery_charge_anchor.toFixed(2)}` : null}
-        isFree={isDeliveryFree}
-        iconName={isPickup ? 'storefront-outline' : 'bicycle-outline'}
-      />
-
       {/* ── Packing Charge (only when > 0) ── */}
       {packingCharge > 0 && (
         <BillRow
-          label="Packing charge"
+          label="Packing charges"
           value={`₹${packingCharge.toFixed(2)}`}
           iconName="cube-outline"
           zebra
         />
+      )}
+
+      {/* ── Merged Delivery Row (always shown — FREE for pickup) ── */}
+      <BillRow
+        label={deliveryLabel}
+        value={isDeliveryFree ? "FREE" : `₹${combinedDelivery.toFixed(2)}`}
+        anchorValue={
+          !isPickup && breakdown.delivery_charge_anchor
+            ? `₹${breakdown.delivery_charge_anchor.toFixed(2)}`
+            : null
+        }
+        isFree={isDeliveryFree}
+        iconName={isPickup ? "storefront-outline" : "bicycle-outline"}
+      />
+
+      {/* ── GST Row ── */}
+      {breakdown.gst_amount != null && breakdown.gst_amount > 0 && (
+        <>
+          <BillRow
+            label={`GST (${breakdown.gst_rate ?? 0}%)`}
+            value={`₹${breakdown.gst_amount.toFixed(2)}`}
+            iconName="calculator-outline"
+            zebra
+            onInfoPress={() => setShowGstTooltip((v) => !v)}
+          />
+          {showGstTooltip && (
+            <View
+              style={[
+                styles.gstTooltip,
+                {
+                  backgroundColor: colors.background.card,
+                  borderColor: colors.border.default,
+                  shadowColor: colors.brand.primary,
+                },
+              ]}
+            >
+              <View style={styles.gstTooltipHeader}>
+                <Ionicons name="calculator-outline" size={12} color={colors.brand.primary} />
+                <Text style={[styles.gstTooltipTitle, { color: colors.text.primary }]}>
+                  {breakdown.gst_type === "IGST" ? "IGST" : "CGST + SGST"} Breakdown
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowGstTooltip(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close" size={14} color={colors.text.faint} />
+                </TouchableOpacity>
+              </View>
+              {(breakdown.gst_breakdown || []).map((g: any, idx: number) => {
+                const comp =
+                  g.component === "medicine_subtotal" ? "Subtotal"
+                  : g.component === "service_charge" ? "Service"
+                  : g.component === "delivery_charge" ? "Delivery"
+                  : g.component === "packing_charge" ? "Packing"
+                  : g.component;
+                return (
+                  <View key={idx} style={styles.gstTooltipRow}>
+                    <Text style={[styles.gstTooltipLabel, { color: colors.text.secondary }]}>
+                      {comp}
+                    </Text>
+                    <Text style={[styles.gstTooltipMath, { color: colors.text.muted }]}>
+                      ₹{Number(g.base).toFixed(2)} × {breakdown.gst_rate}%
+                    </Text>
+                    <Text style={[styles.gstTooltipValue, { color: colors.text.primary }]}>
+                      ₹{Number(g.gst).toFixed(2)}
+                    </Text>
+                  </View>
+                );
+              })}
+              {(!breakdown.gst_breakdown || breakdown.gst_breakdown.length === 0) && (
+                <Text style={[styles.gstTooltipFallback, { color: colors.text.muted }]}>
+                  Total GST: ₹{breakdown.gst_amount!.toFixed(2)}
+                </Text>
+              )}
+            </View>
+          )}
+        </>
       )}
 
       {/* ── SAVINGS SECTION ── */}
@@ -309,14 +425,15 @@ export function BillDetailsCard() {
       )}
 
       {/* ── Platform Savings Row ── */}
-      {breakdown.platform_savings !== undefined && breakdown.platform_savings > 0 && (
-        <BillRow
-          label="Total Savings"
-          value={`-₹${breakdown.platform_savings.toFixed(2)}`}
-          isDiscount
-          iconName="trending-down-outline"
-        />
-      )}
+      {breakdown.platform_savings !== undefined &&
+        breakdown.platform_savings > 0 && (
+          <BillRow
+            label="Total Savings"
+            value={`-₹${breakdown.platform_savings.toFixed(2)}`}
+            isDiscount
+            iconName="trending-down-outline"
+          />
+        )}
 
       {/* ── Tip selector (hidden for pickup — no rider) ── */}
       {!isPickup && (
@@ -330,7 +447,11 @@ export function BillDetailsCard() {
           ]}
         >
           <View style={styles.tipHeader}>
-            <Ionicons name="heart-outline" size={14} color={colors.brand.primary} />
+            <Ionicons
+              name="heart-outline"
+              size={14}
+              color={colors.brand.primary}
+            />
             <View style={{ flex: 1 }}>
               <Text style={[styles.tipTitle, { color: colors.text.primary }]}>
                 Tip your rider
@@ -351,18 +472,22 @@ export function BillDetailsCard() {
                   style={[
                     styles.tipBtn,
                     {
-                      backgroundColor: selected ? colors.brand.primary : colors.background.card,
-                      borderColor: selected ? colors.brand.primary : colors.border.default,
+                      backgroundColor: selected
+                        ? colors.brand.primary
+                        : colors.background.card,
+                      borderColor: selected
+                        ? colors.brand.primary
+                        : colors.border.default,
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.tipBtnText,
-                      { color: selected ? '#fff' : colors.text.secondary },
+                      { color: selected ? "#fff" : colors.text.secondary },
                     ]}
                   >
-                    {preset === 0 ? 'None' : `₹${preset}`}
+                    {preset === 0 ? "None" : `₹${preset}`}
                   </Text>
                 </TouchableOpacity>
               );
@@ -388,7 +513,7 @@ export function BillDetailsCard() {
           styles.totalBand,
           {
             backgroundColor: colors.background.tint,
-            borderColor: colors.brand.primary + '22',
+            borderColor: colors.brand.primary + "22",
           },
         ]}
       >
@@ -399,7 +524,9 @@ export function BillDetailsCard() {
             color={colors.brand.primary}
             style={{ marginRight: 8 }}
           />
-          <Text style={[styles.grandTotalLabel, { color: colors.text.primary }]}>
+          <Text
+            style={[styles.grandTotalLabel, { color: colors.text.primary }]}
+          >
             Grand Total
           </Text>
         </View>
@@ -419,9 +546,15 @@ export function BillDetailsCard() {
             },
           ]}
         >
-          <Ionicons name="gift-outline" size={14} color={colors.status.success} />
-          <Text style={[styles.promoNoticeText, { color: colors.status.success }]}>
-            You earned free delivery on this order!
+          <Ionicons
+            name="gift-outline"
+            size={14}
+            color={colors.status.success}
+          />
+          <Text
+            style={[styles.promoNoticeText, { color: colors.status.success }]}
+          >
+            Free delivery
           </Text>
         </View>
       )}
@@ -437,8 +570,14 @@ export function BillDetailsCard() {
             },
           ]}
         >
-          <Ionicons name="sparkles-outline" size={14} color={colors.status.success} />
-          <Text style={[styles.promoNoticeText, { color: colors.status.success }]}>
+          <Ionicons
+            name="sparkles-outline"
+            size={14}
+            color={colors.status.success}
+          />
+          <Text
+            style={[styles.promoNoticeText, { color: colors.status.success }]}
+          >
             Platform fee waived for this order!
           </Text>
         </View>
@@ -450,11 +589,11 @@ export function BillDetailsCard() {
 const styles = StyleSheet.create({
   // ── Card shell with left accent ──
   cardOuter: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 20,
-    shadowColor: '#090025',
+    shadowColor: "#090025",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -475,8 +614,8 @@ const styles = StyleSheet.create({
 
   // ── Title ──
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: Spacing.md,
     gap: 8,
   },
@@ -484,12 +623,12 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     letterSpacing: 0.2,
   },
   titleUnderline: {
@@ -503,7 +642,7 @@ const styles = StyleSheet.create({
   // ── Section micro-label ──
   sectionLabel: {
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     letterSpacing: 1.2,
     marginBottom: 6,
     marginTop: 2,
@@ -511,52 +650,52 @@ const styles = StyleSheet.create({
 
   // ── Rows ──
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 7,
     marginBottom: 1,
   },
   labelWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     flexShrink: 1,
   },
   valueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   anchorValue: {
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    textDecorationLine: 'line-through',
+    fontFamily: "Inter_400Regular",
+    textDecorationLine: "line-through",
   },
   label: {
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     flexShrink: 1,
   },
   value: {
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
   },
   totalLabel: {
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
   },
   totalValue: {
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
   },
 
   // ── Dashed divider ──
   dashedWrap: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginVertical: 10,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   dash: {
     width: 4,
@@ -572,27 +711,27 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
   },
   tipHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 10,
   },
   tipTitle: {
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
   },
   tipSub: {
     fontSize: 10.5,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     marginTop: 1,
   },
   tipOptions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   tipBtn: {
     flex: 1,
@@ -601,18 +740,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   tipBtnText: {
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
   },
 
   // ── Grand total band ──
   totalBand: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 12,
@@ -621,19 +760,19 @@ const styles = StyleSheet.create({
   },
   grandTotalLabel: {
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     letterSpacing: 0.2,
   },
   grandTotalValue: {
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     letterSpacing: 0.3,
   },
 
   // ── Promo notices (left accent style) ──
   promoNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -643,15 +782,68 @@ const styles = StyleSheet.create({
   },
   promoNoticeText: {
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     flex: 1,
+  },
+
+  // ── GST Tooltip ──
+  gstTooltip: {
+    marginHorizontal: 4,
+    marginBottom: 6,
+    marginTop: -2,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  gstTooltipHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  gstTooltipTitle: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.3,
+  },
+  gstTooltipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 3,
+  },
+  gstTooltipLabel: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+  },
+  gstTooltipMath: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    marginRight: 8,
+  },
+  gstTooltipValue: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    minWidth: 52,
+    textAlign: "right",
+  },
+  gstTooltipFallback: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    paddingVertical: 2,
   },
 
   // ── Skeleton loading ──
   skeletonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 10,
   },
   skeletonBar: {

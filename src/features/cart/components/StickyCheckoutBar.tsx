@@ -1,6 +1,5 @@
 // src/features/cart/components/StickyCheckoutBar.tsx (do not remove this comment)
 
-import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -19,14 +18,6 @@ import { Spacing } from "../../../theme/spacing";
 import { useTheme } from "../../../theme/ThemeContext";
 import { useAddresses } from "../../profile/hooks/useAddresses";
 
-function hexToRgba(hex: string, alpha: number): string {
-  const clean = hex.replace("#", "");
-  const r = parseInt(clean.substring(0, 2), 16) || 0;
-  const g = parseInt(clean.substring(2, 4), 16) || 0;
-  const b = parseInt(clean.substring(4, 6), 16) || 0;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 interface StickyCheckoutBarProps {
   onPlaceOrder: () => void | Promise<void>;
   isPlacing?: boolean;
@@ -40,13 +31,14 @@ export function StickyCheckoutBar({
   const insets = useSafeAreaInsets();
   const brandColor = isDark ? colors.brand.accent : colors.brand.primary;
 
-  // Local idempotency click-shielding state
   const [localPlacing, setLocalPlacing] = useState(false);
 
   const items = useCartStore((s) => s.items);
   const tempFiles = usePrescriptionStore((s) => s.tempFiles);
   const breakdown = useCheckoutStore((s) => s.breakdown);
   const isQuoteLoading = useCheckoutStore((s) => s.isQuoteLoading);
+  const fulfillmentType = useCheckoutStore((s) => s.fulfillmentType);
+  const isPickup = fulfillmentType === "PICKUP";
 
   const { addresses } = useAddresses();
   const pickedAddressId = useDeliveryLocationStore(
@@ -61,10 +53,8 @@ export function StickyCheckoutBar({
   const noAddress = !resolvedAddress;
   const deliveryUnavailable = breakdown ? !breakdown.delivery_available : false;
 
-  // Determine active loading/placing state (combination of local shielding + parent controller)
   const isPlacing = isPlacingProp || localPlacing;
 
-  // Disable button if missing metadata, quote is loading, or order submission is already active
   const isBlocked =
     prescriptionBlocked ||
     noAddress ||
@@ -80,7 +70,6 @@ export function StickyCheckoutBar({
     (breakdown?.loyalty_discount ?? 0);
   const hasSavings = totalSavings > 0;
 
-  // Idempotent click-shield handler
   const handlePlaceOrderPress = async () => {
     if (isBlocked) return;
 
@@ -90,15 +79,23 @@ export function StickyCheckoutBar({
     setLocalPlacing(true);
 
     try {
-      // Execute the order placement (supporting both synchronous and asynchronous actions)
       await onPlaceOrder();
     } catch (error) {
       console.warn("[Cart Checkout] Place Order failed.", error);
     } finally {
-      // Always unlock the button so cancellations, alerts, or failures restore interactivity
       setLocalPlacing(false);
     }
   };
+
+  // ── Resolve active nudge ───────────────────────────────────
+  const serviceNudge = breakdown?.nudges?.free_service_charge;
+  const deliveryNudge = !isPickup ? breakdown?.nudges?.free_delivery : null;
+  const nudge =
+    serviceNudge && serviceNudge.gap < 200
+      ? { gap: serviceNudge.gap, type: "service" as const }
+      : deliveryNudge && deliveryNudge.gap < 200
+        ? { gap: deliveryNudge.gap, type: "delivery" as const }
+        : null;
 
   return (
     <View
@@ -110,54 +107,65 @@ export function StickyCheckoutBar({
         },
       ]}
     >
+      {/* ── Full-width nudge ribbon on top ─────────────────── */}
+      {nudge && (
+        <View
+          style={[
+            styles.nudge,
+            { backgroundColor: colors.background.accent },
+          ]}
+        >
+          <Text style={[styles.nudgeText, { color: colors.text.brand }]}>
+            Add{" "}
+            <Text style={[styles.nudgeBold, { color: colors.text.brand }]}>
+              ₹{nudge.gap}
+            </Text>
+            {" "}more{" "}
+            {nudge.type === "delivery" ? "for " : "to "}
+            <Text style={[styles.nudgeBold, { color: colors.text.brand }]}>
+              {nudge.type === "delivery" ? "free delivery" : "waive platform fee"}
+            </Text>
+          </Text>
+        </View>
+      )}
+
+      {/* ── Prescription warning ───────────────────────────── */}
       {prescriptionBlocked && (
         <View
           style={[
             styles.notice,
             {
               backgroundColor: colors.status.warningBg,
-              borderLeftColor: colors.status.warning,
+              borderColor: colors.status.warningBorder,
             },
           ]}
           accessibilityRole="alert"
         >
-          <Ionicons
-            name="document-text-outline"
-            size={14}
-            color={colors.status.warning}
-          />
-          <Text
-            style={[styles.noticeText, { color: colors.status.warning }]}
-          >
+          <Text style={[styles.noticeText, { color: colors.status.warning }]}>
             Upload prescription above before placing order
           </Text>
         </View>
       )}
 
+      {/* ── Delivery unavailable ───────────────────────────── */}
       {deliveryUnavailable && breakdown?.unavailable_reason && (
         <View
           style={[
             styles.notice,
             {
               backgroundColor: colors.status.errorBg,
-              borderLeftColor: colors.status.error,
+              borderColor: colors.status.errorBorder,
             },
           ]}
           accessibilityRole="alert"
         >
-          <Ionicons
-            name="alert-circle-outline"
-            size={14}
-            color={colors.status.error}
-          />
-          <Text
-            style={[styles.noticeText, { color: colors.status.error }]}
-          >
+          <Text style={[styles.noticeText, { color: colors.status.error }]}>
             {breakdown.unavailable_reason}
           </Text>
         </View>
       )}
 
+      {/* ── Action row ─────────────────────────────────────── */}
       <View style={styles.actionRow}>
         <View style={styles.totalBlock}>
           {isQuoteLoading ? (
@@ -182,34 +190,17 @@ export function StickyCheckoutBar({
                 {grandTotal > 0 ? `₹${grandTotal.toFixed(2)}` : "—"}
               </Text>
               {hasSavings ? (
-                <View style={styles.subLabelRow}>
-                  <Ionicons
-                    name="trending-down-outline"
-                    size={10}
-                    color={colors.status.success}
-                  />
-                  <Text
-                    style={[
-                      styles.savingsLabel,
-                      { color: colors.status.success },
-                    ]}
-                  >
-                    You Saved ₹{totalSavings.toFixed(2)} !!
-                  </Text>
-                </View>
+                <Text
+                  style={[styles.savingsLabel, { color: colors.status.success }]}
+                >
+                  You saved ₹{totalSavings.toFixed(2)}!
+                </Text>
               ) : (
-                <View style={styles.subLabelRow}>
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={10}
-                    color={colors.text.faint}
-                  />
-                  <Text
-                    style={[styles.totalLabel, { color: colors.text.faint }]}
-                  >
-                    incl. all charges
-                  </Text>
-                </View>
+                <Text
+                  style={[styles.totalLabel, { color: colors.text.faint }]}
+                >
+                  incl. all charges
+                </Text>
               )}
             </>
           )}
@@ -244,21 +235,14 @@ export function StickyCheckoutBar({
               color={colors.brand.primaryText}
             />
           ) : (
-            <>
-              <Text
-                style={[
-                  styles.proceedBtnText,
-                  { color: colors.brand.primaryText },
-                ]}
-              >
-                Place Order
-              </Text>
-              <Ionicons
-                name="arrow-forward"
-                size={16}
-                color={colors.brand.primaryText}
-              />
-            </>
+            <Text
+              style={[
+                styles.proceedBtnText,
+                { color: colors.brand.primaryText },
+              ]}
+            >
+              Place Order
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -278,22 +262,42 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  notice: {
-    flexDirection: "row",
+
+  /* ── Full-bleed nudge ribbon ──────────────────────────── */
+  nudge: {
+    width: "100%",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    paddingVertical: 9,
+    paddingHorizontal: Spacing.base,
+  },
+  nudgeText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    textAlign: "center",
+    letterSpacing: 0.1,
+  },
+  nudgeBold: {
+    fontFamily: "Inter_700Bold",
+  },
+
+  /* ── Warning / error notices ──────────────────────────── */
+  notice: {
+    alignItems: "center",
     marginHorizontal: Spacing.base,
     marginTop: Spacing.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderLeftWidth: 3,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   noticeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
-    flex: 1,
+    textAlign: "center",
   },
+
+  /* ── Action row ───────────────────────────────────────── */
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -324,11 +328,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     letterSpacing: -0.3,
   },
-  subLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
   totalLabel: {
     fontSize: 10,
     fontFamily: "Inter_400Regular",
@@ -341,8 +340,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 22,
+    paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 14,
     minWidth: 140,

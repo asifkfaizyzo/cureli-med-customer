@@ -107,6 +107,12 @@ export interface MobileOrderDetail {
   delivery_charge_anchor?: number | null;
   platform_savings?: number | null;
 
+  // ── GST (platform tax on service/delivery/packing) ──
+  gst_rate?: number | null;
+  gst_type?: string | null;
+  gst_amount?: number | null;
+  gst_breakdown?: { component: string; base: number; gst: number }[] | null;
+
   // ── Coupon & Loyalty ──────────────────────────────────────────
   coupon_code?: string | null;
   coupon_discount_amount?: number | null;

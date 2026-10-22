@@ -26,6 +26,17 @@ export interface PriceBreakdown {
   unavailable_reason:       string | null;
   same_day_available?:      boolean;
   same_day_cutoff_hour?:    number;
+  // ── Distance (for "slashed km" display) ──
+  distance_km?:              number | null;
+  nudges?: {
+    free_delivery: { gap: number; threshold: number } | null;
+    free_service_charge: { gap: number; threshold: number } | null;
+  } | null;
+  // ── GST ──
+  gst_rate?: number | null;
+  gst_type?: string | null;
+  gst_amount?: number | null;
+  gst_breakdown?: { component: string; base: number; gst: number }[] | null;
 }
 
 export interface PrescriptionRequestContext {

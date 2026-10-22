@@ -83,8 +83,8 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
           fulfillment_type: fulfillmentType,
         });
         setBreakdown(res.data.data);
-      } catch {
-        // Silent recovery
+      } catch (err: any) {
+        console.error("[Quote] FAILED:", err?.response?.data || err?.message || err);
       } finally {
         setQuoteLoading(false);
       }

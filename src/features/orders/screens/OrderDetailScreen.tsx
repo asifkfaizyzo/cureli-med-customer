@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   Modal,
@@ -538,6 +539,10 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     () => (order ? safeNum(order.platform_savings) : null),
     [order],
   );
+  const billDistanceKm = useMemo(
+    () => (order ? safeNum(order.distance_km) : null),
+    [order],
+  );
 
   const isPickupOrder = order?.fulfillment_type === "PICKUP";
 
@@ -546,8 +551,24 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
     isPickupOrder ||
     (billDeliveryFee === 0 && billDeliveryAnchor != null);
 
+  // ── Delivery label: append distance when known (hidden for pickup / 0km) ──
+  const deliveryLabel = isPickupOrder
+    ? "Delivery fee (Pickup)"
+    : billDistanceKm != null && billDistanceKm > 0
+      ? `Delivery (${
+          Number.isInteger(billDistanceKm)
+            ? billDistanceKm
+            : billDistanceKm.toFixed(1)
+        } km)`
+      : "Delivery fee";
+
   const billPackingCharge = useMemo(
     () => (order ? safeNum(order.packing_charge) : null),
+    [order],
+  );
+
+  const billGstAmount = useMemo(
+    () => (order ? safeNum(order.gst_amount) : null),
     [order],
   );
 
@@ -1030,7 +1051,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
             )}
             {billDeliveryFee != null && (billDeliveryFee > 0 || isDeliveryFree) && (
               <PriceRow
-                label={isPickup ? "Delivery fee (Pickup)" : "Delivery fee"}
+                label={deliveryLabel}
                 value={isDeliveryFree ? "FREE" : formatCurrency(billDeliveryFee)}
                 anchorValue={!isPickup && billDeliveryAnchor ? formatCurrency(billDeliveryAnchor) : null}
                 isFree={isDeliveryFree}
@@ -1040,6 +1061,29 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
               <PriceRow
                 label="Packing charge"
                 value={formatCurrency(billPackingCharge)}
+              />
+            )}
+            {billGstAmount != null && billGstAmount > 0 && (
+              <PriceRow
+                label={`GST (${order.gst_rate ?? 0}%)`}
+                value={formatCurrency(billGstAmount)}
+                onInfoPress={() => {
+                  const lines = (order.gst_breakdown || [])
+                    .map((g: any) => {
+                      const comp =
+                        g.component === "medicine_subtotal" ? "Subtotal"
+                        : g.component === "service_charge" ? "Service"
+                        : g.component === "delivery_charge" ? "Delivery"
+                        : g.component === "packing_charge" ? "Packing"
+                        : g.component;
+                      return `• ${comp}: ₹${Number(g.base).toFixed(2)} × ${order.gst_rate}% = ₹${Number(g.gst).toFixed(2)}`;
+                    })
+                    .join("\n");
+                  Alert.alert(
+                    `GST Breakdown (${order.gst_type === "IGST" ? "IGST" : "CGST+SGST"})`,
+                    lines || `Total GST: ₹${billGstAmount.toFixed(2)}`,
+                  );
+                }}
               />
             )}
             {billTip != null && billTip > 0 && (
@@ -1082,7 +1126,7 @@ export function OrderDetailScreen({ orderId }: OrderDetailScreenProps) {
             {isDeliveryFree && (
               <View style={[styles.promoNotice, { backgroundColor: colors.status.successBg }]}>
                 <Text style={[styles.promoNoticeText, { color: colors.status.success }]}>
-                  🎉 You earned free delivery on this order!
+                  Free delivery
                 </Text>
               </View>
             )}

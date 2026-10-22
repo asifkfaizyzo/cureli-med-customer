@@ -1,7 +1,8 @@
 // src/features/orders/components/PriceRow.tsx
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../theme/ThemeContext';
 
 interface PriceRowProps {
@@ -11,24 +12,32 @@ interface PriceRowProps {
   isTotal?: boolean;
   isDiscount?: boolean;
   isFree?: boolean;
+  onInfoPress?: () => void;
 }
 
-export function PriceRow({ label, value, anchorValue, isTotal, isDiscount, isFree }: PriceRowProps) {
+export function PriceRow({ label, value, anchorValue, isTotal, isDiscount, isFree, onInfoPress }: PriceRowProps) {
   const { colors } = useTheme();
 
   return (
     <View style={[styles.row, isTotal && styles.totalRow]}>
-      <Text
-        style={[
-          styles.label,
-          {
-            color: isTotal ? colors.text.primary : colors.text.secondary,
-            fontFamily: isTotal ? 'Inter_600SemiBold' : 'Inter_400Regular',
-          },
-        ]}
-      >
-        {label}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 }}>
+        <Text
+          style={[
+            styles.label,
+            {
+              color: isTotal ? colors.text.primary : colors.text.secondary,
+              fontFamily: isTotal ? 'Inter_600SemiBold' : 'Inter_400Regular',
+            },
+          ]}
+        >
+          {label}
+        </Text>
+        {onInfoPress && (
+          <TouchableOpacity onPress={onInfoPress} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}>
+            <Ionicons name="information-circle-outline" size={14} color={colors.text.faint} />
+          </TouchableOpacity>
+        )}
+      </View>
       <View style={styles.valueContainer}>
         {anchorValue && (
           <Text style={[styles.anchorValue, { color: colors.text.faint }]}>
