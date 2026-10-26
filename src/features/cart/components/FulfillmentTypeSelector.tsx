@@ -90,6 +90,7 @@ export function FulfillmentTypeSelector() {
   const { colors } = useTheme();
   const fulfillmentType = useCheckoutStore((s) => s.fulfillmentType);
   const setFulfillmentType = useCheckoutStore((s) => s.setFulfillmentType);
+  const activeFulfillmentTypes = useCheckoutStore((s) => s.activeFulfillmentTypes);
   const breakdown = useCheckoutStore((s) => s.breakdown);
 
   // Use server-provided cutoff when available; fall back to IST check
@@ -97,7 +98,15 @@ export function FulfillmentTypeSelector() {
   const sameDayAvailable =
     breakdown?.same_day_available ?? getCurrentISTHour() < cutoffHour;
 
-  const options = getOptions(colors, sameDayAvailable, cutoffHour);
+  const allOptions = getOptions(colors, sameDayAvailable, cutoffHour);
+  const options = allOptions.filter((o) => activeFulfillmentTypes.includes(o.type));
+
+  // Auto-fallback: if current selection was disabled, switch to Instant
+  React.useEffect(() => {
+    if (options.length > 0 && !activeFulfillmentTypes.includes(fulfillmentType)) {
+      setFulfillmentType('INSTANT_DELIVERY');
+    }
+  }, [activeFulfillmentTypes, fulfillmentType, options.length, setFulfillmentType]);
 
   const handleSelect = (option: OptionConfig) => {
     if (option.locked) return;

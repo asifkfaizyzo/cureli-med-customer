@@ -14,7 +14,27 @@ import { useCheckoutStore } from "../../../store/checkoutStore";
 import { useTheme } from "../../../theme/ThemeContext";
 import { Spacing } from "../../../theme/spacing";
 
+// REPLACE
 const TIP_PRESETS = [0, 10, 20, 50];
+
+// ── Static tooltip text for each charge row ──────────────────
+// Edit these strings to change what customers see when they tap
+// the ⓘ icon next to each line item. Keep them short and simple.
+const CHARGE_TOOLTIPS: Record<string, string> = {
+  items_total:
+    "Sum of all medicine prices in your cart before any charges or discounts.",
+  service_charge:
+    "Platform fee for order processing, customer support, and app maintenance.",
+  packing_charge:
+    "Fee for packing materials and handling your order at the pharmacy.",
+  coupon: "Discount applied using your coupon code.",
+  loyalty: "Discount from redeeming your earned loyalty points.",
+  platform_savings:
+    "Total savings from platform promotions, free delivery, and waived fees.",
+  tip: "Optional gratuity for your delivery partner. 100% goes directly to the rider.",
+  grand_total:
+    "Final payable amount after all charges, taxes, and discounts.",
+};
 
 // ── Dashed divider rendered as a row of small dashes ──────────
 function DashedDivider({ color }: { color: string }) {
@@ -113,6 +133,7 @@ function BillRow({
         {onInfoPress && (
           <TouchableOpacity
             onPress={onInfoPress}
+            style={{ marginLeft: 4 }}
             hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
           >
             <Ionicons
@@ -191,7 +212,10 @@ export function BillDetailsCard() {
   const { colors } = useTheme();
   const { breakdown, isQuoteLoading, tip, setTip, fulfillmentType } =
     useCheckoutStore();
-  const [showGstTooltip, setShowGstTooltip] = React.useState(false);
+  // Single state: which tooltip is currently open (only one at a time)
+  const [activeTooltip, setActiveTooltip] = React.useState<string | null>(null);
+  const toggleTooltip = (key: string) =>
+    setActiveTooltip((prev) => (prev === key ? null : key));
 
   // ── Card shell with left accent bar ──
   const CardShell = ({ children }: { children: React.ReactNode }) => (
@@ -287,11 +311,17 @@ export function BillDetailsCard() {
       {/* ── CHARGES SECTION ── */}
       <SectionLabel label="CHARGES" color={colors.text.faint} />
 
-      <BillRow
+     <BillRow
         label="Items total"
         value={`₹${breakdown.subtotal.toFixed(2)}`}
         iconName="clipboard-outline"
+        onInfoPress={() => toggleTooltip("items_total")}
       />
+      {activeTooltip === "items_total" && (
+        <View style={[styles.staticTooltip, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+          <Text style={[styles.staticTooltipText, { color: colors.text.secondary }]}>{CHARGE_TOOLTIPS.items_total}</Text>
+        </View>
+      )}
 
       {/* ── Service Charge Row ── */}
       <BillRow
@@ -307,15 +337,30 @@ export function BillDetailsCard() {
         isFree={isServiceFree}
         iconName="briefcase-outline"
         zebra
+        onInfoPress={() => toggleTooltip("service_charge")}
       />
+      {activeTooltip === "service_charge" && (
+        <View style={[styles.staticTooltip, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+          <Text style={[styles.staticTooltipText, { color: colors.text.secondary }]}>{CHARGE_TOOLTIPS.service_charge}</Text>
+        </View>
+      )}
+
       {/* ── Packing Charge (only when > 0) ── */}
       {packingCharge > 0 && (
-        <BillRow
-          label="Packing charges"
-          value={`₹${packingCharge.toFixed(2)}`}
-          iconName="cube-outline"
-          zebra
-        />
+        <>
+          <BillRow
+            label="Packing charges"
+            value={`₹${packingCharge.toFixed(2)}`}
+            iconName="cube-outline"
+            zebra
+            onInfoPress={() => toggleTooltip("packing_charge")}
+          />
+          {activeTooltip === "packing_charge" && (
+            <View style={[styles.staticTooltip, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+              <Text style={[styles.staticTooltipText, { color: colors.text.secondary }]}>{CHARGE_TOOLTIPS.packing_charge}</Text>
+            </View>
+          )}
+        </>
       )}
 
       {/* ── Merged Delivery Row (always shown — FREE for pickup) ── */}
@@ -329,7 +374,117 @@ export function BillDetailsCard() {
         }
         isFree={isDeliveryFree}
         iconName={isPickup ? "storefront-outline" : "bicycle-outline"}
+       onInfoPress={
+          !isPickup && breakdown.delivery_breakdown
+            ? () => toggleTooltip("delivery")
+            : undefined
+        }
       />
+
+      {/* ── Delivery Fee Transparency Tooltip ── */}
+      {!isPickup && activeTooltip === "delivery" && breakdown.delivery_breakdown && (
+        <View
+          style={[
+            styles.deliveryTooltip,
+            {
+              backgroundColor: colors.background.card,
+              borderColor: colors.border.default,
+              shadowColor: colors.brand.primary,
+            },
+          ]}
+        >
+          <View style={styles.deliveryTooltipHeader}>
+            <Ionicons
+              name="bicycle-outline"
+              size={12}
+              color={colors.brand.primary}
+            />
+            <Text
+              style={[
+                styles.deliveryTooltipTitle,
+                { color: colors.text.primary },
+              ]}
+            >
+              Delivery Fee Breakdown
+            </Text>
+            <TouchableOpacity
+              onPress={() => setActiveTooltip(null)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={14} color={colors.text.faint} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.deliveryTooltipRow}>
+            <Text
+              style={[
+                styles.deliveryTooltipLabel,
+                { color: colors.text.secondary },
+              ]}
+            >
+              Base fee
+            </Text>
+            <Text
+              style={[
+                styles.deliveryTooltipValue,
+                { color: colors.text.primary },
+              ]}
+            >
+              ₹{breakdown.delivery_breakdown.flat_charge.toFixed(2)}
+            </Text>
+          </View>
+
+          <View style={styles.deliveryTooltipRow}>
+            <Text
+              style={[
+                styles.deliveryTooltipLabel,
+                { color: colors.text.secondary },
+              ]}
+            >
+              Free up to
+            </Text>
+            <Text
+              style={[
+                styles.deliveryTooltipValue,
+                { color: colors.text.primary },
+              ]}
+            >
+              {breakdown.delivery_breakdown.free_radius_km} km
+            </Text>
+          </View>
+
+          {breakdown.delivery_breakdown.charged_distance_km > 0 ? (
+            <View style={styles.deliveryTooltipRow}>
+              <Text
+                style={[
+                  styles.deliveryTooltipLabel,
+                  { color: colors.text.secondary },
+                ]}
+              >
+                Extra {breakdown.delivery_breakdown.charged_distance_km.toFixed(1)}{" "}
+                km × ₹{breakdown.delivery_breakdown.per_km_rate}/km
+              </Text>
+              <Text
+                style={[
+                  styles.deliveryTooltipValue,
+                  { color: colors.text.primary },
+                ]}
+              >
+                ₹{breakdown.delivery_breakdown.distance_charge.toFixed(2)}
+              </Text>
+            </View>
+          ) : (
+            <Text
+              style={[
+                styles.deliveryTooltipFallback,
+                { color: colors.text.muted },
+              ]}
+            >
+              Your delivery is within the free distance radius.
+            </Text>
+          )}
+        </View>
+      )}
 
       {/* ── GST Row ── */}
       {breakdown.gst_amount != null && breakdown.gst_amount > 0 && (
@@ -339,9 +494,9 @@ export function BillDetailsCard() {
             value={`₹${breakdown.gst_amount.toFixed(2)}`}
             iconName="calculator-outline"
             zebra
-            onInfoPress={() => setShowGstTooltip((v) => !v)}
+            onInfoPress={() => toggleTooltip("gst")}
           />
-          {showGstTooltip && (
+          {activeTooltip === "gst" && (
             <View
               style={[
                 styles.gstTooltip,
@@ -358,7 +513,7 @@ export function BillDetailsCard() {
                   {breakdown.gst_type === "IGST" ? "IGST" : "CGST + SGST"} Breakdown
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setShowGstTooltip(false)}
+                  onPress={() => setActiveTooltip(null)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Ionicons name="close" size={14} color={colors.text.faint} />
@@ -403,36 +558,60 @@ export function BillDetailsCard() {
         </>
       )}
 
-      {/* ── Coupons ── */}
+     {/* ── Coupons ── */}
       {breakdown.coupon_discount > 0 && (
-        <BillRow
-          label={`Coupon (${breakdown.coupon_code})`}
-          value={`-₹${breakdown.coupon_discount.toFixed(2)}`}
-          isDiscount
-          iconName="pricetag-outline"
-        />
+        <>
+          <BillRow
+            label={`Coupon (${breakdown.coupon_code})`}
+            value={`-₹${breakdown.coupon_discount.toFixed(2)}`}
+            isDiscount
+            iconName="pricetag-outline"
+            onInfoPress={() => toggleTooltip("coupon")}
+          />
+          {activeTooltip === "coupon" && (
+            <View style={[styles.staticTooltip, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+              <Text style={[styles.staticTooltipText, { color: colors.text.secondary }]}>{CHARGE_TOOLTIPS.coupon}</Text>
+            </View>
+          )}
+        </>
       )}
 
       {/* ── Loyalty Points ── */}
       {breakdown.loyalty_discount > 0 && (
-        <BillRow
-          label={`Loyalty Points (-${breakdown.loyalty_points_redeemed} pts)`}
-          value={`-₹${breakdown.loyalty_discount.toFixed(2)}`}
-          isDiscount
-          iconName="star-outline"
-          zebra
-        />
+        <>
+          <BillRow
+            label={`Loyalty Points (-${breakdown.loyalty_points_redeemed} pts)`}
+            value={`-₹${breakdown.loyalty_discount.toFixed(2)}`}
+            isDiscount
+            iconName="star-outline"
+            zebra
+            onInfoPress={() => toggleTooltip("loyalty")}
+          />
+          {activeTooltip === "loyalty" && (
+            <View style={[styles.staticTooltip, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+              <Text style={[styles.staticTooltipText, { color: colors.text.secondary }]}>{CHARGE_TOOLTIPS.loyalty}</Text>
+            </View>
+          )}
+        </>
       )}
 
       {/* ── Platform Savings Row ── */}
       {breakdown.platform_savings !== undefined &&
         breakdown.platform_savings > 0 && (
-          <BillRow
-            label="Total Savings"
-            value={`-₹${breakdown.platform_savings.toFixed(2)}`}
-            isDiscount
-            iconName="trending-down-outline"
-          />
+          <>
+            <BillRow
+              label="Total Savings"
+              value={`-₹${breakdown.platform_savings.toFixed(2)}`}
+              isDiscount
+              iconName="trending-down-outline"
+              onInfoPress={() => toggleTooltip("platform_savings")}
+            />
+            {activeTooltip === "platform_savings" && (
+              <View style={[styles.staticTooltip, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+                <Text style={[styles.staticTooltipText, { color: colors.text.secondary }]}>{CHARGE_TOOLTIPS.platform_savings}</Text>
+              </View>
+            )}
+          </>
         )}
 
       {/* ── Tip selector (hidden for pickup — no rider) ── */}
@@ -497,18 +676,26 @@ export function BillDetailsCard() {
       )}
 
       {!isPickup && tip > 0 && (
-        <BillRow
-          label="Tip"
-          value={`₹${tip.toFixed(2)}`}
-          iconName="heart"
-          iconColor={colors.brand.primary}
-        />
+        <>
+          <BillRow
+            label="Tip"
+            value={`₹${tip.toFixed(2)}`}
+            iconName="heart"
+            iconColor={colors.brand.primary}
+            onInfoPress={() => toggleTooltip("tip")}
+          />
+          {activeTooltip === "tip" && (
+            <View style={[styles.staticTooltip, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+              <Text style={[styles.staticTooltipText, { color: colors.text.secondary }]}>{CHARGE_TOOLTIPS.tip}</Text>
+            </View>
+          )}
+        </>
       )}
 
       <DashedDivider color={colors.border.default} />
 
       {/* ── Grand Total — highlighted band ── */}
-      <View
+       <View
         style={[
           styles.totalBand,
           {
@@ -529,11 +716,13 @@ export function BillDetailsCard() {
           >
             Grand Total
           </Text>
+          
         </View>
         <Text style={[styles.grandTotalValue, { color: colors.brand.primary }]}>
           ₹{breakdown.grand_total.toFixed(2)}
         </Text>
       </View>
+      
 
       {/* ── Promotional Earning Badges — left accent bar style ── */}
       {isDeliveryFree && (
@@ -837,6 +1026,71 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     paddingVertical: 2,
+  },
+
+  // ── Delivery Fee Tooltip ──
+  deliveryTooltip: {
+    marginHorizontal: 4,
+    marginBottom: 6,
+    marginTop: -2,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  deliveryTooltipHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  deliveryTooltipTitle: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.3,
+  },
+  deliveryTooltipRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 3,
+  },
+  deliveryTooltipLabel: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+  },
+  deliveryTooltipValue: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    minWidth: 52,
+    textAlign: "right",
+  },
+  deliveryTooltipFallback: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    paddingVertical: 2,
+  },
+
+   // ── Static info tooltip (hardcoded text) ──
+  staticTooltip: {
+    marginHorizontal: 4,
+    marginBottom: 4,
+    marginTop: -2,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  staticTooltipText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 16,
   },
 
   // ── Skeleton loading ──

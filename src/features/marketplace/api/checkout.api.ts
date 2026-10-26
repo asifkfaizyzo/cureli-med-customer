@@ -6,6 +6,9 @@ import type { CheckoutPatient } from "../../../types/auth";
 import type { FulfillmentType } from "../../../types/order";
 
 export const checkoutApi = {
+  getActiveFulfillmentTypes: () =>
+    api.get("/mobile/checkout/active-fulfillment-types"),
+
   getQuote: (data: {
     branch_id: string;
     items: { variantId: string; quantity: number }[];

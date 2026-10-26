@@ -84,6 +84,10 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
         });
         setBreakdown(res.data.data);
       } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || "";
+        if (msg.includes("fulfillment option is currently not available")) {
+          useCheckoutStore.getState().setFulfillmentType("INSTANT_DELIVERY");
+        }
         console.error("[Quote] FAILED:", err?.response?.data || err?.message || err);
       } finally {
         setQuoteLoading(false);
@@ -221,6 +225,13 @@ export function useCheckout({ distanceKm, onSuccess }: UseCheckoutOptions) {
         await showAlert({
           title: "Session Expired",
           message: "Your checkout session expired. Please try again.",
+          confirmLabel: "OK",
+        });
+      } else if (message.includes("fulfillment option is currently not available")) {
+        useCheckoutStore.getState().setFulfillmentType("INSTANT_DELIVERY");
+        await showAlert({
+          title: "Option Unavailable",
+          message: "Your selected delivery option is no longer available. Switched to Instant Delivery.",
           confirmLabel: "OK",
         });
       } else {

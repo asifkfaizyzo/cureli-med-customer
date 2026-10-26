@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -46,6 +47,7 @@ import { StickyCheckoutBar } from "../components/StickyCheckoutBar";
 
 import { useDeliveryETA } from "../../../hooks/useDeliveryETA";
 import { useCheckout } from "../hooks/useCheckout";
+import { checkoutApi } from "../../marketplace/api/checkout.api";
 
 import { useCartStore } from "../../../store/cartStore";
 import { useDeliveryLocationStore } from "../../../store/deliveryLocationStore";
@@ -284,8 +286,21 @@ export function CartScreen() {
   const selectedPatient = useCheckoutStore((s) => s.selectedPatient);
   const setSelectedPatient = useCheckoutStore((s) => s.setSelectedPatient);
   const fulfillmentType = useCheckoutStore((s) => s.fulfillmentType);
+  const setActiveFulfillmentTypes = useCheckoutStore((s) => s.setActiveFulfillmentTypes);
   const isPickup = fulfillmentType === "PICKUP";
   const user = useAuthStore((s) => s.user);
+
+  // ── Fetch active fulfillment types on mount ──
+  useEffect(() => {
+    checkoutApi.getActiveFulfillmentTypes().then((res) => {
+      const types = res?.data?.data?.active_types;
+      if (Array.isArray(types) && types.length > 0) {
+        setActiveFulfillmentTypes(types);
+      }
+    }).catch(() => {
+      // Non-critical — selector falls back to showing all types
+    });
+  }, []);
 
   useEffect(() => {
     if (
@@ -347,6 +362,33 @@ export function CartScreen() {
   const handleBack = useCallback(() => {
     router.back();
   }, []);
+
+  // ── Pull to refresh ──────────────────────────────────────
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      // Re-fetch fulfillment types
+      const res = await checkoutApi.getActiveFulfillmentTypes();
+      const types = res?.data?.data?.active_types;
+      if (Array.isArray(types) && types.length > 0) {
+        setActiveFulfillmentTypes(types);
+      }
+
+      // Re-sync address from store in case it changed externally
+      const currentAddresses = useDeliveryLocationStore.getState().location;
+      if (currentAddresses.addressId) {
+        selectAddress({ ...currentAddresses, source: "saved" });
+      }
+    } catch {
+      // Non-critical — silently ignore
+    } finally {
+      // Minimum spinner time so it doesn't flash
+      await new Promise((r) => setTimeout(r, 600));
+      setIsRefreshing(false);
+    }
+  }, [setActiveFulfillmentTypes, selectAddress]);
 
   const handleGoHome = useCallback(() => {
     router.replace("/(tabs)/home" as any);
@@ -492,6 +534,15 @@ export function CartScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brand.primary}
+              colors={[colors.brand.primary]}
+              progressViewOffset={8}
+            />
+          }
         >
           <FulfillmentTypeSelector />
 

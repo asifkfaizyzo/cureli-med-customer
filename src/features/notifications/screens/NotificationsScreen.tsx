@@ -27,6 +27,7 @@ import {
   type InboxNotification,
 } from '../api/notifications.api';
 import { NotificationCard } from '../components/NotificationCard';
+import { NotificationDetailModal } from '../components/NotificationDetailModal';
 import { handleNotificationTap } from '../../../utils/notificationTap';
 import { useNotificationStore } from '../../../store/notificationStore';
 import { useLayoutStore } from '../../../store/layoutStore';
@@ -146,6 +147,9 @@ export function NotificationsScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const [selectedNotification, setSelectedNotification] =
+    useState<InboxNotification | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const isLoadingRef = useRef(false);
 
@@ -247,10 +251,24 @@ export function NotificationsScreen() {
           .catch(() => {});
       }
 
-      handleNotificationTap(notification.data);
+      setSelectedNotification({
+        ...notification,
+        is_read: true,
+        read_at: notification.read_at ?? new Date().toISOString(),
+      });
+      setIsModalVisible(true);
     },
     [setUnreadCount],
   );
+
+  const handleModalClose = useCallback(() => {
+    setIsModalVisible(false);
+    setTimeout(() => setSelectedNotification(null), 200);
+  }, []);
+
+  const handleModalAction = useCallback((notification: InboxNotification) => {
+    handleNotificationTap(notification.data);
+  }, []);
 
   // ── Mark all as read ───────────────────────────────────────────────────
 
@@ -528,6 +546,13 @@ export function NotificationsScreen() {
             progressViewOffset={8}
           />
         }
+      />
+
+      <NotificationDetailModal
+        notification={selectedNotification}
+        visible={isModalVisible}
+        onClose={handleModalClose}
+        onAction={handleModalAction}
       />
     </SafeAreaView>
   );

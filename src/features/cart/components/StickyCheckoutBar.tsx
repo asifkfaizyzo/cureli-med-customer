@@ -87,14 +87,20 @@ export function StickyCheckoutBar({
     }
   };
 
-  // ── Resolve active nudge ───────────────────────────────────
+   // ── Resolve active nudge ───────────────────────────────────
+  // Only ever show ONE nudge (service OR delivery — never both), and for
+  // delivery, only say "free delivery" when a ₹0-flat tier is actually ahead.
   const serviceNudge = breakdown?.nudges?.free_service_charge;
   const deliveryNudge = !isPickup ? breakdown?.nudges?.free_delivery : null;
   const nudge =
     serviceNudge && serviceNudge.gap < 200
-      ? { gap: serviceNudge.gap, type: "service" as const }
+      ? { gap: serviceNudge.gap, type: "service" as const, isFree: true }
       : deliveryNudge && deliveryNudge.gap < 200
-        ? { gap: deliveryNudge.gap, type: "delivery" as const }
+        ? {
+            gap: deliveryNudge.gap,
+            type: "delivery" as const,
+            isFree: deliveryNudge.isFreeDelivery ?? true,
+          }
         : null;
 
   return (
@@ -123,7 +129,11 @@ export function StickyCheckoutBar({
             {" "}more{" "}
             {nudge.type === "delivery" ? "for " : "to "}
             <Text style={[styles.nudgeBold, { color: colors.text.brand }]}>
-              {nudge.type === "delivery" ? "free delivery" : "waive platform fee"}
+              {nudge.type === "delivery"
+                ? nudge.isFree
+                  ? "free delivery"
+                  : "lower delivery fee"
+                : "waive platform fee"}
             </Text>
           </Text>
         </View>
